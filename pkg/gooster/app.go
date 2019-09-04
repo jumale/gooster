@@ -79,6 +79,7 @@ func (app *App) AddWidget(w Widget) {
 }
 
 func (app *App) Run() {
+	app.ctx.Logger.Debug("Starting App")
 	defer func() {
 		if err := app.Close(); err != nil {
 			panic(err)
@@ -93,6 +94,7 @@ func (app *App) Run() {
 }
 
 func (app *App) Close() error {
+	app.ctx.Logger.Debug("Closing App")
 	if err := app.ctx.EventManager.Close(); err != nil {
 		return err
 	}

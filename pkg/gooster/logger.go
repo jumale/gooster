@@ -77,7 +77,6 @@ type SelfLogger struct {
 }
 
 func (l *SelfLogger) send(level LogLevel, msg string) {
-	fmt.Printf("send %v %s\n", level, msg)
 	if level < l.level {
 		return
 	}

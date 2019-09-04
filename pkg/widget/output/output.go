@@ -1,7 +1,6 @@
 package output
 
 import (
-	"fmt"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/rivo/tview"
@@ -39,7 +38,6 @@ func (w *Widget) Init(ctx *gooster.AppContext) error {
 	w.view.SetBackgroundColor(tcell.ColorDefault)
 
 	ctx.EventManager.Subscribe(gooster.EventOutputMessage, func(event gooster.Event) {
-		fmt.Printf("Output: %+v\n", event)
 		w.addText(event.Data.(string))
 	})
 
