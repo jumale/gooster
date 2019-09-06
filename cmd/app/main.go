@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/jumale/gooster/pkg/log"
 	"github.com/jumale/gooster/pkg/widget/output"
 	"github.com/jumale/gooster/pkg/widget/status"
 	"github.com/jumale/gooster/pkg/widget/wdtree"
@@ -11,7 +12,7 @@ import (
 func main() {
 	shell, err := gooster.NewApp(gooster.AppConfig{
 		InitDir:       getWd(),
-		LogLevel:      gooster.LogDebug,
+		LogLevel:      log.Debug,
 		EventsLogPath: "/tmp/gooster-events.log",
 
 		Grid: gooster.GridConfig{

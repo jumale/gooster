@@ -19,40 +19,34 @@ func NewWidget(cfg Config) *Widget {
 type Widget struct {
 	cfg  Config
 	view *tview.TreeView
+	*gooster.AppContext
 }
 
 func (w *Widget) Name() string {
 	return "Working Directory Tree"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) error {
+func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+	w.AppContext = ctx
+
 	w.view = tview.NewTreeView()
 	w.view.SetBorder(false)
 	w.view.SetBackgroundColor(tcell.ColorSlateGray)
 	w.view.SetGraphicsColor(tcell.ColorLightGoldenrodYellow)
 	w.view.SetTitleColor(tcell.ColorBlue)
 	w.view.SetSelectedFunc(w.selectNode)
-	ctx.Logger.DebugF("%s has focus == %v", w.Name(), w.view.GetFocusable().HasFocus())
+	w.Log.DebugF("%s has focus == %v", w.Name(), w.view.GetFocusable().HasFocus())
 
-	ctx.EventManager.Subscribe(gooster.EventWorkDirChange, func(event gooster.Event) {
-		workDir := event.Data.(string)
+	w.Actions.OnWorkDirChange(func(newPath string) {
 		root := tview.NewTreeNode("./")
-		w.addPath(root, workDir)
+		w.addPath(root, newPath)
 		root.SetColor(tcell.ColorDarkCyan)
 
 		w.view.SetRoot(root)
 		w.view.SetCurrentNode(root)
 	})
 
-	return nil
-}
-
-func (w *Widget) View() tview.Primitive {
-	return w.view
-}
-
-func (w *Widget) Config() gooster.WidgetConfig {
-	return w.cfg.WidgetConfig
+	return w.view, w.cfg.WidgetConfig, nil
 }
 
 func (w *Widget) addPath(target *tview.TreeNode, path string) {

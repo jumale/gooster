@@ -2,13 +2,16 @@ package gooster
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/log"
 	"github.com/rivo/tview"
+	"time"
 )
 
 type AppConfig struct {
 	Grid          GridConfig
 	InitDir       string
-	LogLevel      LogLevel
+	LogLevel      log.Level
 	EventsLogPath string
 }
 
@@ -18,34 +21,32 @@ type GridConfig struct {
 }
 
 func NewApp(cfg AppConfig) (*App, error) {
+	root := tview.NewApplication()
 	ctx, err := NewAppContext(cfg)
 	if err != nil {
 		return nil, err
 	}
+	ctx.Actions.afterAction = func(e events.Event) {
+		root.Draw()
+	}
 
-	ctx.Logger.Debug("Start initializing app")
+	ctx.Log.Debug("Start initializing app")
 
 	grid := tview.NewGrid()
 	grid.SetBackgroundColor(tcell.ColorDefault)
 	grid.SetColumns(cfg.Grid.Cols...)
 	grid.SetRows(cfg.Grid.Rows...)
-
-	view := tview.NewApplication()
-	view.SetRoot(grid, true)
+	root.SetRoot(grid, true)
 
 	app := &App{
 		cfg:  cfg,
-		root: view,
+		root: root,
 		grid: grid,
 		ctx:  ctx,
 	}
 
-	ctx.EventManager.Dispatch(Event{
-		Id:   EventWorkDirChange,
-		Data: cfg.InitDir,
-	})
-
-	ctx.Logger.Debug("App is initialized")
+	ctx.Actions.SetWorkDir(cfg.InitDir)
+	ctx.Log.Debug("App is initialized")
 
 	return app, nil
 }
@@ -59,27 +60,31 @@ type App struct {
 }
 
 func (app *App) AddWidget(w Widget) {
-	if err := w.Init(app.ctx); err != nil {
+	view, cfg, err := w.Init(app.ctx)
+	if err != nil {
 		panic(err)
 	}
 
 	app.widgets = append(app.widgets, w)
 
 	app.grid.AddItem(
-		w.View(),
-		w.Config().Row,
-		w.Config().Col,
-		w.Config().Height,
-		w.Config().Width,
-		0,
-		0,
-		w.Config().Focused,
+		view,
+		cfg.Row, cfg.Col,
+		cfg.Height, cfg.Width,
+		0, 0,
+		cfg.Focused,
 	)
-	app.ctx.Logger.DebugF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]\n", w.Name(), w.Config())
+	app.ctx.Log.DebugF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
 }
 
 func (app *App) Run() {
-	app.ctx.Logger.Debug("Starting App")
+	app.ctx.Log.Debug("Starting App")
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		app.ctx.Log.Debug("---->")
+	}()
+
 	defer func() {
 		if err := app.Close(); err != nil {
 			panic(err)
@@ -94,7 +99,7 @@ func (app *App) Run() {
 }
 
 func (app *App) Close() error {
-	app.ctx.Logger.Debug("Closing App")
+	app.ctx.Log.Debug("Closing App")
 	if err := app.ctx.EventManager.Close(); err != nil {
 		return err
 	}

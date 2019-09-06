@@ -4,9 +4,7 @@ import "github.com/rivo/tview"
 
 type Widget interface {
 	Name() string
-	Init(*AppContext) error
-	View() tview.Primitive
-	Config() WidgetConfig
+	Init(*AppContext) (tview.Primitive, WidgetConfig, error)
 }
 
 type Position struct {

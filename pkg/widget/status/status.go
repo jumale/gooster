@@ -17,23 +17,29 @@ func NewWidget(cfg Config) *Widget {
 type Widget struct {
 	cfg  Config
 	view *tview.Table
+	*gooster.AppContext
 }
 
 func (w *Widget) Name() string {
 	return "Status"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) error {
+func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+	w.AppContext = ctx
+
 	w.view = tview.NewTable()
 	w.view.SetBorder(false)
 	w.view.SetBorders(false)
 	w.view.SetBackgroundColor(tcell.ColorGray)
 
-	wd := tview.NewTableCell("/Some/path")
+	wd := tview.NewTableCell("")
 	wd.SetTextColor(tcell.ColorYellow)
 	wd.SetExpansion(2)
 	wd.SetAlign(tview.AlignLeft)
 	w.view.SetCell(0, 0, wd)
+	w.Actions.OnWorkDirChange(func(newPath string) {
+		wd.SetText(newPath)
+	})
 
 	branch := tview.NewTableCell("master")
 	branch.SetTextColor(tcell.ColorLightGreen)
@@ -41,19 +47,11 @@ func (w *Widget) Init(ctx *gooster.AppContext) error {
 	branch.SetAlign(tview.AlignCenter)
 	w.view.SetCell(0, 1, branch)
 
-	kubeContext := tview.NewTableCell("some.long-context.preview.ams1.example.com")
-	kubeContext.SetTextColor(tcell.ColorLightBlue)
-	kubeContext.SetExpansion(2)
-	kubeContext.SetAlign(tview.AlignRight)
-	w.view.SetCell(0, 2, kubeContext)
+	kubeCtx := tview.NewTableCell("some.long-context.preview.ams1.example.com")
+	kubeCtx.SetTextColor(tcell.ColorLightBlue)
+	kubeCtx.SetExpansion(2)
+	kubeCtx.SetAlign(tview.AlignRight)
+	w.view.SetCell(0, 2, kubeCtx)
 
-	return nil
-}
-
-func (w *Widget) View() tview.Primitive {
-	return w.view
-}
-
-func (w *Widget) Config() gooster.WidgetConfig {
-	return w.cfg.WidgetConfig
+	return w.view, w.cfg.WidgetConfig, nil
 }
