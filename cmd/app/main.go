@@ -56,7 +56,7 @@ func main() {
 			Focused: true,
 		},
 		Colors: workdir.ColorsConfig{
-			Bg:     tcell.ColorDarkSlateGray,
+			Bg:     tcell.NewHexColor(0x405454),
 			Lines:  tcell.ColorLightSeaGreen,
 			Folder: tcell.ColorLightGreen,
 			File:   tcell.ColorLightSteelBlue,
@@ -82,6 +82,12 @@ func main() {
 			},
 			Enabled: !args.ShowHelp,
 			Focused: false,
+		},
+		Colors: status.ColorsConfig{
+			Bg:         tcell.ColorDimGray,
+			WorkDir:    tcell.ColorGold,
+			Branch:     tcell.ColorLimeGreen,
+			K8sContext: tcell.ColorSkyblue,
 		},
 	}))
 

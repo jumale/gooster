@@ -8,6 +8,14 @@ import (
 
 type Config struct {
 	gooster.WidgetConfig `json:",inline"`
+	Colors               ColorsConfig
+}
+
+type ColorsConfig struct {
+	Bg         tcell.Color
+	WorkDir    tcell.Color
+	Branch     tcell.Color
+	K8sContext tcell.Color
 }
 
 func NewWidget(cfg Config) *Widget {
@@ -30,10 +38,10 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view = tview.NewTable()
 	w.view.SetBorder(false)
 	w.view.SetBorders(false)
-	w.view.SetBackgroundColor(tcell.ColorGray)
+	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
 
 	wd := tview.NewTableCell("")
-	wd.SetTextColor(tcell.ColorYellow)
+	wd.SetTextColor(w.cfg.Colors.WorkDir)
 	wd.SetExpansion(2)
 	wd.SetAlign(tview.AlignLeft)
 	w.view.SetCell(0, 0, wd)
@@ -42,16 +50,16 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	})
 
 	branch := tview.NewTableCell("master")
-	branch.SetTextColor(tcell.ColorLightGreen)
+	branch.SetTextColor(w.cfg.Colors.Branch)
 	branch.SetExpansion(1)
 	branch.SetAlign(tview.AlignCenter)
 	w.view.SetCell(0, 1, branch)
 
-	kubeCtx := tview.NewTableCell("some.long-context.preview.ams1.example.com")
-	kubeCtx.SetTextColor(tcell.ColorLightBlue)
-	kubeCtx.SetExpansion(2)
-	kubeCtx.SetAlign(tview.AlignRight)
-	w.view.SetCell(0, 2, kubeCtx)
+	k8sCtx := tview.NewTableCell("some.long-context.preview.ams1.example.com")
+	k8sCtx.SetTextColor(w.cfg.Colors.K8sContext)
+	k8sCtx.SetExpansion(2)
+	k8sCtx.SetAlign(tview.AlignRight)
+	w.view.SetCell(0, 2, k8sCtx)
 
 	return w.view, w.cfg.WidgetConfig, nil
 }
