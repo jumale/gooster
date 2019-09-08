@@ -2,6 +2,7 @@ package events
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 	"strings"
 	"sync"
@@ -30,7 +31,7 @@ func NewManager(cfg ManagerConfig) (*Manager, error) {
 	}
 	if cfg.LogFile != "" {
 		if err := em.initEventLog(cfg.LogFile); err != nil {
-			return nil, err
+			return nil, errors.WithMessage(err, "init event log")
 		}
 	}
 
@@ -81,12 +82,18 @@ func (em *Manager) Start() {
 
 func (em *Manager) Close() error {
 	em.log("Closing Event Manager")
-	return em.eventLog.Close()
+	if em.eventLog != nil {
+		if err := em.eventLog.Close(); err != nil {
+			return errors.WithMessage(err, "close event-log file")
+		}
+	}
+
+	return nil
 }
 
 func (em *Manager) initEventLog(path string) (err error) {
 	if em.eventLog, err = os.Create(path); err != nil {
-		return err
+		return errors.WithMessage(err, "open event-log file")
 	}
 	em.log("Initializing Event Manager")
 	return nil

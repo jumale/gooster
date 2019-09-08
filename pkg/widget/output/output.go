@@ -21,7 +21,7 @@ type Widget struct {
 }
 
 func (w *Widget) Name() string {
-	return "Console Output"
+	return "output"
 }
 
 func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {

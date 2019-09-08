@@ -1,36 +1,65 @@
 package main
 
 import (
+	"fmt"
+	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/log"
+	"github.com/jumale/gooster/pkg/widget/help"
 	"github.com/jumale/gooster/pkg/widget/output"
 	"github.com/jumale/gooster/pkg/widget/status"
-	"github.com/jumale/gooster/pkg/widget/wdtree"
+	"github.com/jumale/gooster/pkg/widget/workdir"
 	"os"
 )
 
 func main() {
-	shell, err := gooster.NewApp(gooster.AppConfig{
-		InitDir:       getWd(),
-		LogLevel:      log.Debug,
-		EventsLogPath: "/tmp/gooster-events.log",
+	args := struct {
+		ShowHelp bool
+	}{
+		ShowHelp: len(os.Args) > 1 && (os.Args[1] == "--help" || os.Args[1] == "-h"),
+	}
+	fmt.Println(os.Args, args)
 
-		Grid: gooster.GridConfig{
-			Cols: []int{20, -1},
-			Rows: []int{1, -1, 5, 5},
-		},
+	grid := gooster.GridConfig{
+		Cols: []int{20, -1},
+		Rows: []int{1, -1, 5, 5},
+	}
+
+	shell, err := gooster.NewApp(gooster.AppConfig{
+		InitDir:  getWd(),
+		LogLevel: log.Debug,
+		Grid:     grid,
+		//EventsLogPath: "/tmp/gooster-events.log",
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	shell.AddWidget(wdtree.NewWidget(wdtree.Config{
+	shell.AddWidget(help.NewWidget(help.Config{
+		WidgetConfig: gooster.WidgetConfig{
+			Position: gooster.Position{
+				Col: 0, Row: 0,
+				Width: len(grid.Cols), Height: len(grid.Rows),
+			},
+			Enabled: args.ShowHelp,
+			Focused: false,
+		},
+	}))
+
+	shell.AddWidget(workdir.NewWidget(workdir.Config{
 		WidgetConfig: gooster.WidgetConfig{
 			Position: gooster.Position{
 				Col: 0, Row: 1,
 				Width: 1, Height: 3,
 			},
+			Enabled: !args.ShowHelp,
 			Focused: true,
+		},
+		Colors: workdir.ColorsConfig{
+			Bg:     tcell.ColorDarkSlateGray,
+			Lines:  tcell.ColorLightSeaGreen,
+			Folder: tcell.ColorLightGreen,
+			File:   tcell.ColorLightSteelBlue,
 		},
 	}))
 
@@ -40,6 +69,7 @@ func main() {
 				Col: 1, Row: 1,
 				Width: 1, Height: 1,
 			},
+			Enabled: !args.ShowHelp,
 			Focused: false,
 		},
 	}))
@@ -50,6 +80,7 @@ func main() {
 				Col: 0, Row: 0,
 				Width: 2, Height: 1,
 			},
+			Enabled: !args.ShowHelp,
 			Focused: false,
 		},
 	}))

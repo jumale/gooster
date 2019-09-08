@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/log"
+	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"time"
 )
@@ -24,7 +25,7 @@ func NewApp(cfg AppConfig) (*App, error) {
 	root := tview.NewApplication()
 	ctx, err := NewAppContext(cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "init app context")
 	}
 	ctx.Actions.afterAction = func(e events.Event) {
 		root.Draw()
@@ -36,7 +37,6 @@ func NewApp(cfg AppConfig) (*App, error) {
 	grid.SetBackgroundColor(tcell.ColorDefault)
 	grid.SetColumns(cfg.Grid.Cols...)
 	grid.SetRows(cfg.Grid.Rows...)
-	root.SetRoot(grid, true)
 
 	app := &App{
 		cfg:  cfg,
@@ -62,7 +62,11 @@ type App struct {
 func (app *App) AddWidget(w Widget) {
 	view, cfg, err := w.Init(app.ctx)
 	if err != nil {
-		panic(err)
+		panic(errors.WithMessage(err, "init widget"))
+	}
+
+	if !cfg.Enabled {
+		return
 	}
 
 	app.widgets = append(app.widgets, w)
@@ -87,21 +91,22 @@ func (app *App) Run() {
 
 	defer func() {
 		if err := app.Close(); err != nil {
-			panic(err)
+			panic(errors.WithMessage(err, "closing app"))
 		}
 	}()
 
 	app.ctx.EventManager.Start()
 
+	app.root.SetRoot(app.grid, true)
 	if err := app.root.Run(); err != nil {
-		panic(err)
+		panic(errors.WithMessage(err, "run app"))
 	}
 }
 
 func (app *App) Close() error {
 	app.ctx.Log.Debug("Closing App")
 	if err := app.ctx.EventManager.Close(); err != nil {
-		return err
+		return errors.WithMessage(err, "closing event manager")
 	}
 
 	return nil

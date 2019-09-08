@@ -1,4 +1,4 @@
-package wdtree
+package workdir
 
 import (
 	"github.com/gdamore/tcell"
@@ -7,10 +7,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 )
-
-type Config struct {
-	gooster.WidgetConfig `json:",inline"`
-}
 
 func NewWidget(cfg Config) *Widget {
 	return &Widget{cfg: cfg}
@@ -23,7 +19,7 @@ type Widget struct {
 }
 
 func (w *Widget) Name() string {
-	return "Working Directory Tree"
+	return "work_dir"
 }
 
 func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
@@ -31,19 +27,29 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 
 	w.view = tview.NewTreeView()
 	w.view.SetBorder(false)
-	w.view.SetBackgroundColor(tcell.ColorSlateGray)
-	w.view.SetGraphicsColor(tcell.ColorLightGoldenrodYellow)
-	w.view.SetTitleColor(tcell.ColorBlue)
+	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
+	w.view.SetGraphicsColor(w.cfg.Colors.Lines)
 	w.view.SetSelectedFunc(w.selectNode)
 	w.Log.DebugF("%s has focus == %v", w.Name(), w.view.GetFocusable().HasFocus())
 
 	w.Actions.OnWorkDirChange(func(newPath string) {
 		root := tview.NewTreeNode("./")
 		w.addPath(root, newPath)
-		root.SetColor(tcell.ColorDarkCyan)
+		root.SetColor(w.cfg.Colors.Lines)
 
 		w.view.SetRoot(root)
 		w.view.SetCurrentNode(root)
+	})
+
+	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		w.Log.Debug("Pressed: ", tcell.KeyNames[event.Key()])
+		switch event.Key() {
+		case w.cfg.Keys.ViewFile:
+			w.Log.Debug(w.view.GetCurrentNode().GetText())
+		case w.cfg.Keys.Delete:
+			w.Log.Debug("delete")
+		}
+		return event
 	})
 
 	return w.view, w.cfg.WidgetConfig, nil
@@ -52,16 +58,16 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 func (w *Widget) addPath(target *tview.TreeNode, path string) {
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
-		panic(err)
+		return
 	}
 	for _, file := range files {
 		node := tview.NewTreeNode(file.Name()).
 			SetReference(filepath.Join(path, file.Name())).
 			SetSelectable(true).
-			SetColor(tcell.ColorLightGray)
+			SetColor(w.cfg.Colors.File)
 
 		if file.IsDir() {
-			node.SetColor(tcell.ColorLightGreen)
+			node.SetColor(w.cfg.Colors.Folder)
 		}
 		target.AddChild(node)
 	}

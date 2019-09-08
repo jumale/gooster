@@ -3,6 +3,7 @@ package gooster
 import (
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/log"
+	"github.com/pkg/errors"
 	"io"
 )
 
@@ -21,7 +22,7 @@ func NewAppContext(cfg AppConfig) (ctx *AppContext, err error) {
 		LogFile:              cfg.EventsLogPath,
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "init event manager")
 	}
 
 	ctx.Actions = &actions{

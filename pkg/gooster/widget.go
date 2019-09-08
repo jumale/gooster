@@ -16,5 +16,6 @@ type Position struct {
 
 type WidgetConfig struct {
 	Position `json:",inline"`
+	Enabled  bool `json:"enabled"`
 	Focused  bool `json:"focused"`
 }

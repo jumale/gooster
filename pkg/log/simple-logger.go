@@ -2,6 +2,7 @@ package log
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"io"
 	"time"
@@ -26,7 +27,7 @@ func (l *SimpleLogger) log(level Level, msg string) {
 
 	_, err := l.target.Write([]byte(fmt.Sprintf("[%s]%s[-] %s\n", color, prefix, msg)))
 	if err != nil {
-		panic(err)
+		panic(errors.WithMessage(err, "writing to log target"))
 	}
 }
 
