@@ -90,10 +90,14 @@ func main() {
 			Focused:  true,
 			FocusKey: tcell.KeyCtrlF,
 		},
+		PrintDivider: true,
+		PrintCommand: true,
 		Colors: prompt.ColorsConfig{
-			Bg:    tcell.NewHexColor(0x555555),
-			Label: tcell.ColorLime,
-			Text:  tcell.ColorLightGray,
+			Bg:      tcell.NewHexColor(0x555555),
+			Label:   tcell.ColorLime,
+			Text:    tcell.ColorLightGray,
+			Divider: tcell.ColorLimeGreen,
+			Command: tcell.ColorRoyalBlue,
 		},
 	}))
 

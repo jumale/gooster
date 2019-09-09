@@ -30,7 +30,14 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
 	w.view.SetGraphicsColor(w.cfg.Colors.Lines)
 	w.view.SetSelectedFunc(w.selectNode)
-	w.Log.DebugF("%s has focus == %v", w.Name(), w.view.GetFocusable().HasFocus())
+
+	w.view.SetKeyBinding(tview.TreeMoveUp, rune(tcell.KeyUp))
+	w.view.SetKeyBinding(tview.TreeMoveDown, rune(tcell.KeyDown))
+	w.view.SetKeyBinding(tview.TreeMovePageUp, rune(tcell.KeyPgUp))
+	w.view.SetKeyBinding(tview.TreeMovePageDown, rune(tcell.KeyPgDn))
+	w.view.SetKeyBinding(tview.TreeMoveHome, rune(tcell.KeyHome))
+	w.view.SetKeyBinding(tview.TreeMoveEnd, rune(tcell.KeyEnd))
+	w.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyEnter), ' ')
 
 	w.Actions.OnWorkDirChange(func(newPath string) {
 		root := tview.NewTreeNode("./")
@@ -42,7 +49,6 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	})
 
 	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		w.Log.Debug("Pressed: ", tcell.KeyNames[event.Key()])
 		switch event.Key() {
 		case w.cfg.Keys.ViewFile:
 			w.Log.Debug(w.view.GetCurrentNode().GetText())
