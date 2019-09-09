@@ -32,12 +32,17 @@ func (c *Command) Run(input string) error {
 	}
 
 	// Prepare the command to execute.
-	cmd := exec.Command(args[0], args[1:]...)
+	cmd := exec.Command("bash", "-c", input)
 
 	// Set the correct output device.
 	cmd.Stderr = c.Stderr
 	cmd.Stdout = c.Stdout
 
 	// Execute the command and return the error.
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil && !strings.HasPrefix(err.Error(), "exit status") {
+		return err
+	} else {
+		return nil
+	}
 }
