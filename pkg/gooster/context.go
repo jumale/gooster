@@ -41,5 +41,5 @@ type outputWriter struct {
 
 func (o *outputWriter) Write(p []byte) (n int, err error) {
 	o.actions.Write(p)
-	return 0, nil
+	return len(p), nil
 }
