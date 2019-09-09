@@ -6,7 +6,6 @@ import (
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/rivo/tview"
-	"time"
 )
 
 type AppConfig struct {
@@ -39,10 +38,11 @@ func NewApp(cfg AppConfig) (*App, error) {
 	grid.SetRows(cfg.Grid.Rows...)
 
 	app := &App{
-		cfg:  cfg,
-		root: root,
-		grid: grid,
-		ctx:  ctx,
+		cfg:      cfg,
+		root:     root,
+		grid:     grid,
+		ctx:      ctx,
+		focusMap: make(map[tcell.Key]tview.Primitive),
 	}
 
 	ctx.Actions.SetWorkDir(cfg.InitDir)
@@ -52,11 +52,12 @@ func NewApp(cfg AppConfig) (*App, error) {
 }
 
 type App struct {
-	cfg     AppConfig
-	root    *tview.Application
-	grid    *tview.Grid
-	widgets []Widget
-	ctx     *AppContext
+	cfg      AppConfig
+	root     *tview.Application
+	grid     *tview.Grid
+	widgets  []Widget
+	ctx      *AppContext
+	focusMap map[tcell.Key]tview.Primitive
 }
 
 func (app *App) AddWidget(w Widget) {
@@ -70,6 +71,9 @@ func (app *App) AddWidget(w Widget) {
 	}
 
 	app.widgets = append(app.widgets, w)
+	if cfg.FocusKey != 0 {
+		app.focusMap[cfg.FocusKey] = view
+	}
 
 	app.grid.AddItem(
 		view,
@@ -84,11 +88,6 @@ func (app *App) AddWidget(w Widget) {
 func (app *App) Run() {
 	app.ctx.Log.Debug("Starting App")
 
-	go func() {
-		time.Sleep(3 * time.Second)
-		app.ctx.Log.Debug("---->")
-	}()
-
 	defer func() {
 		if err := app.Close(); err != nil {
 			panic(errors.WithMessage(err, "closing app"))
@@ -96,6 +95,14 @@ func (app *App) Run() {
 	}()
 
 	app.ctx.EventManager.Start()
+
+	app.root.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if view, ok := app.focusMap[event.Key()]; ok {
+			app.root.SetFocus(view)
+		}
+
+		return event
+	})
 
 	app.root.SetRoot(app.grid, true)
 	if err := app.root.Run(); err != nil {

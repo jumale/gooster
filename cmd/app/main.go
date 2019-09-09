@@ -53,8 +53,9 @@ func main() {
 				Col: 0, Row: 1,
 				Width: 1, Height: 3,
 			},
-			Enabled: !args.ShowHelp,
-			Focused: false,
+			Enabled:  !args.ShowHelp,
+			Focused:  false,
+			FocusKey: tcell.KeyCtrlW,
 		},
 		Colors: workdir.ColorsConfig{
 			Bg:     tcell.NewHexColor(0x405454),
@@ -85,8 +86,9 @@ func main() {
 				Col: 1, Row: 2,
 				Width: 1, Height: 1,
 			},
-			Enabled: !args.ShowHelp,
-			Focused: true,
+			Enabled:  !args.ShowHelp,
+			Focused:  true,
+			FocusKey: tcell.KeyCtrlF,
 		},
 		Colors: prompt.ColorsConfig{
 			Bg:    tcell.NewHexColor(0x555555),

@@ -1,6 +1,9 @@
 package gooster
 
-import "github.com/rivo/tview"
+import (
+	"github.com/gdamore/tcell"
+	"github.com/rivo/tview"
+)
 
 type Widget interface {
 	Name() string
@@ -18,4 +21,5 @@ type WidgetConfig struct {
 	Position `json:",inline"`
 	Enabled  bool `json:"enabled"`
 	Focused  bool `json:"focused"`
+	FocusKey tcell.Key
 }
