@@ -49,8 +49,12 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 
 	w.Actions.OnWorkDirChange(func(newPath string) {
 		root := tview.NewTreeNode(rootNode)
-		w.addPath(root, newPath)
 		root.SetColor(w.cfg.Colors.Lines)
+
+		wd, _ := os.Getwd()
+		root.SetReference(wd + "/" + rootNode)
+
+		w.addPath(root, newPath)
 
 		w.view.SetRoot(root)
 		w.view.SetCurrentNode(root)
@@ -63,13 +67,7 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 		case w.cfg.Keys.Delete:
 			w.Log.Debug("delete")
 		case w.cfg.Keys.Open:
-			ref := w.view.GetCurrentNode().GetReference()
-			if ref == nil {
-				wd, _ := os.Getwd()
-				w.Actions.SetWorkDir(wd + "/" + w.view.GetCurrentNode().GetText())
-			} else {
-				w.Actions.SetWorkDir(fmt.Sprintf("%s", ref))
-			}
+			w.Actions.SetWorkDir(fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference()))
 		}
 		return event
 	})
