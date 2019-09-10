@@ -48,6 +48,7 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
 
 	w.Actions.OnWorkDirChange(func(newPath string) {
+		go w.Log.DebugF("WorkDir: set new work dir '%s'", newPath)
 		root := tview.NewTreeNode(rootNode)
 		root.SetColor(w.cfg.Colors.Lines)
 

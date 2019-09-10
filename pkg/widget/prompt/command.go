@@ -2,8 +2,8 @@ package prompt
 
 import (
 	"github.com/jumale/gooster/pkg/gooster"
-	"github.com/pkg/errors"
 	"io"
+	"os"
 	"os/exec"
 	"regexp"
 	"strings"
@@ -15,36 +15,49 @@ type Command struct {
 	ctx    *gooster.AppContext
 }
 
-var errNoPath = errors.New("path required")
 var pathRegex = regexp.MustCompile(`^\.{1,2}/`)
 
 func (c *Command) Run(input string) error {
 	args := strings.Split(input, " ")
 
-	if args[0] == "cd" {
-		if len(args) < 2 {
-			return errNoPath
-		}
-		c.ctx.Actions.SetWorkDir(args[1])
-		return nil
-
-	} else if pathRegex.MatchString(args[0]) {
-		c.ctx.Actions.SetWorkDir(args[0])
+	// If it looks like "cd" command:
+	if path := c.detectWorkDirPath(args); path != "" {
+		c.ctx.Log.DebugF("Detected cd path '%s' from args %+v", path, args)
+		c.ctx.Actions.SetWorkDir(path)
 		return nil
 	}
 
-	// Prepare the command to execute.
+	// Otherwise just exec the command:
 	cmd := exec.Command("bash", "-c", input)
-
-	// Set the correct output device.
 	cmd.Stderr = c.Stderr
 	cmd.Stdout = c.Stdout
-
-	// Execute the command and return the error.
 	err := cmd.Run()
+	// Most commands would return errors like "exit status 1" (e.g. `echo "foo" | grep bar`).
+	// We're not interested in those errors and don't want to flood our log with them,
+	// so let's filter them out.
 	if err != nil && !strings.HasPrefix(err.Error(), "exit status") {
 		return err
 	} else {
 		return nil
 	}
+}
+
+func (c *Command) detectWorkDirPath(args []string) (path string) {
+	if args[0] == "cd" && len(args) >= 2 {
+		path = args[1]
+	} else if pathRegex.MatchString(args[0]) {
+		path = args[0]
+	}
+
+	if strings.HasPrefix(path, "~") {
+		ud, _ := os.UserHomeDir()
+		path = strings.Replace(path, "~", ud, 1)
+	}
+
+	if !strings.HasPrefix(path, "/") {
+		wd, _ := os.Getwd()
+		path = strings.Replace(wd+"/"+path, "//", "/", -1)
+	}
+
+	return path
 }
