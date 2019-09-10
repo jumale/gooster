@@ -37,6 +37,7 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view = tview.NewTextView()
 	w.view.SetBorder(false)
 	w.view.SetDynamicColors(true)
+	w.view.SetScrollable(true)
 	w.view.SetBorderPadding(0, 0, 1, 1)
 
 	w.view.SetBackgroundColor(w.cfg.Colors.Bg)

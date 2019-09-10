@@ -6,6 +6,7 @@ import (
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/rivo/tview"
+	"os"
 )
 
 type AppConfig struct {
@@ -45,6 +46,14 @@ func NewApp(cfg AppConfig) (*App, error) {
 		focusMap: make(map[tcell.Key]tview.Primitive),
 	}
 
+	ctx.Actions.OnWorkDirChange(func(newPath string) {
+		if err := os.Chdir(newPath); err != nil {
+			ctx.Log.Error(errors.WithMessage(err, "change work dir"))
+		}
+	})
+	if cfg.InitDir == "" {
+		cfg.InitDir = getWd()
+	}
 	ctx.Actions.SetWorkDir(cfg.InitDir)
 	ctx.Log.Debug("App is initialized")
 

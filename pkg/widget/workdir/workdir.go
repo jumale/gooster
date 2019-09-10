@@ -1,21 +1,29 @@
 package workdir
 
 import (
+	"fmt"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/rivo/tview"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
+const rootNode = "../"
+
 func NewWidget(cfg Config) *Widget {
-	return &Widget{cfg: cfg}
+	return &Widget{
+		cfg:   cfg,
+		paths: make(map[string]*tview.TreeNode),
+	}
 }
 
 type Widget struct {
 	cfg  Config
 	view *tview.TreeView
 	*gooster.AppContext
+	paths map[string]*tview.TreeNode
 }
 
 func (w *Widget) Name() string {
@@ -37,10 +45,10 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetKeyBinding(tview.TreeMovePageDown, rune(tcell.KeyPgDn))
 	w.view.SetKeyBinding(tview.TreeMoveHome, rune(tcell.KeyHome))
 	w.view.SetKeyBinding(tview.TreeMoveEnd, rune(tcell.KeyEnd))
-	w.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyEnter), ' ')
+	w.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
 
 	w.Actions.OnWorkDirChange(func(newPath string) {
-		root := tview.NewTreeNode("./")
+		root := tview.NewTreeNode(rootNode)
 		w.addPath(root, newPath)
 		root.SetColor(w.cfg.Colors.Lines)
 
@@ -54,6 +62,14 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 			w.Log.Debug(w.view.GetCurrentNode().GetText())
 		case w.cfg.Keys.Delete:
 			w.Log.Debug("delete")
+		case w.cfg.Keys.Open:
+			ref := w.view.GetCurrentNode().GetReference()
+			if ref == nil {
+				wd, _ := os.Getwd()
+				w.Actions.SetWorkDir(wd + "/" + w.view.GetCurrentNode().GetText())
+			} else {
+				w.Actions.SetWorkDir(fmt.Sprintf("%s", ref))
+			}
 		}
 		return event
 	})
@@ -62,6 +78,8 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 }
 
 func (w *Widget) addPath(target *tview.TreeNode, path string) {
+	w.paths[path] = target
+
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return

@@ -47,7 +47,7 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	}
 
 	w.view = tview.NewInputField()
-	w.view.SetLabel("> ")
+	w.view.SetLabel(" > ")
 	w.view.SetBorder(false)
 
 	w.view.SetLabelColor(w.cfg.Colors.Label)

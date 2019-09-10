@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/log"
@@ -19,7 +18,6 @@ func main() {
 	}{
 		ShowHelp: len(os.Args) > 1 && (os.Args[1] == "--help" || os.Args[1] == "-h"),
 	}
-	fmt.Println(os.Args, args)
 
 	grid := gooster.GridConfig{
 		Cols: []int{20, -1},
@@ -27,7 +25,7 @@ func main() {
 	}
 
 	shell, err := gooster.NewApp(gooster.AppConfig{
-		InitDir:  getWd(),
+		//InitDir:  "/Users/yurii.maltsev/Dev/src",
 		LogLevel: log.Debug,
 		Grid:     grid,
 		//EventsLogPath: "/tmp/gooster-events.log",
@@ -62,6 +60,11 @@ func main() {
 			Lines:  tcell.ColorLightSeaGreen,
 			Folder: tcell.ColorLightGreen,
 			File:   tcell.ColorLightSteelBlue,
+		},
+		Keys: workdir.KeysConfig{
+			ViewFile: tcell.KeyF3,
+			Delete:   tcell.KeyBackspace2,
+			Open:     tcell.KeyEnter,
 		},
 	}))
 
@@ -119,12 +122,4 @@ func main() {
 	}))
 
 	shell.Run()
-}
-
-func getWd() string {
-	dir, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-	return dir
 }

@@ -21,4 +21,5 @@ type ColorsConfig struct {
 type KeysConfig struct {
 	ViewFile tcell.Key `json:"view_file"`
 	Delete   tcell.Key `json:"delete"`
+	Open     tcell.Key `json:"open"`
 }

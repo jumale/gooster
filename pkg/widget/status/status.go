@@ -4,6 +4,7 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/rivo/tview"
+	"path/filepath"
 )
 
 type Config struct {
@@ -46,7 +47,12 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	wd.SetAlign(tview.AlignLeft)
 	w.view.SetCell(0, 0, wd)
 	w.Actions.OnWorkDirChange(func(newPath string) {
-		wd.SetText(newPath)
+		abs, err := filepath.Abs(newPath)
+		if err != nil {
+			w.Log.Error(err)
+		} else {
+			wd.SetText(abs)
+		}
 	})
 
 	branch := tview.NewTableCell("master")
