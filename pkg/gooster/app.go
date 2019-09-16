@@ -36,7 +36,7 @@ func NewApp(cfg AppConfig) (*App, error) {
 		root.Draw()
 	}
 
-	ctx.log.Debug("Start initializing app")
+	ctx.log.Info("Start initializing app")
 
 	grid := tview.NewGrid()
 	grid.SetBackgroundColor(tcell.ColorDefault)
@@ -60,7 +60,7 @@ func NewApp(cfg AppConfig) (*App, error) {
 		cfg.InitDir = getWd()
 	}
 	ctx.actions.SetWorkDir(cfg.InitDir)
-	ctx.log.Debug("App is initialized")
+	ctx.log.Info("App is initialized")
 
 	return app, nil
 }
@@ -96,13 +96,15 @@ func (app *App) AddWidget(w Widget) {
 		0, 0,
 		cfg.Focused,
 	)
-	app.ctx.log.DebugF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
+	app.ctx.log.InfoF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
 }
 
 func (app *App) Run() {
-	app.ctx.log.Debug("Starting App")
-	app.root.SetInputCapture(app.handleFocusKeys)
-	app.root.SetInputCapture(app.handleInterrupt)
+	app.ctx.log.Info("Starting App")
+	app.root.SetInputCapture(app.createInputHandler(
+		app.handleFocusKeys,
+		app.handleInterrupt,
+	))
 
 	defer func() {
 		if err := app.Close(); err != nil {
@@ -111,11 +113,11 @@ func (app *App) Run() {
 	}()
 
 	app.ctx.actions.OnAppExit(func() {
-		app.ctx.log.Debug("Stopping App")
+		app.ctx.log.Info("Stopping App")
 		if err := app.Close(); err != nil {
 			app.ctx.Log().Error(errors.WithMessage(err, "stopping app"))
 		}
-		app.root.QueueEvent(tview.NewExitEvent())
+		app.root.Stop()
 	})
 
 	app.ctx.em.Start()
@@ -127,7 +129,7 @@ func (app *App) Run() {
 }
 
 func (app *App) Close() error {
-	app.ctx.log.Debug("Closing App")
+	app.ctx.log.Info("Closing App")
 	if err := app.ctx.Close(); err != nil {
 		return errors.WithMessage(err, "closing app context")
 	}
@@ -135,20 +137,40 @@ func (app *App) Close() error {
 	return nil
 }
 
-func (app *App) handleInterrupt(event *tcell.EventKey) *tcell.EventKey {
+func (app *App) createInputHandler(
+	handlers ...func(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool),
+) func(event *tcell.EventKey) *tcell.EventKey {
+
+	return func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() != tcell.KeyRune {
+			app.ctx.log.DebugF("App: pressed key %s", tcell.KeyNames[event.Key()])
+		}
+
+		for _, handler := range handlers {
+			if newEvent, handled := handler(event); handled {
+				return newEvent
+			}
+		}
+		return event
+	}
+}
+
+func (app *App) handleInterrupt(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
 	if event.Key() == tcell.KeyCtrlC {
 		app.ctx.log.Debug("Interrupting latest command")
 		app.ctx.actions.InterruptLatestCommand()
-		return &tcell.EventKey{}
+		return &tcell.EventKey{}, true
 	}
 
-	return event
+	return event, false
 }
 
-func (app *App) handleFocusKeys(event *tcell.EventKey) *tcell.EventKey {
+func (app *App) handleFocusKeys(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
 	if view, ok := app.focusMap[event.Key()]; ok {
+		app.ctx.log.Debug("App: focusing view")
 		app.root.SetFocus(view)
+		return event, true
 	}
 
-	return event
+	return event, false
 }

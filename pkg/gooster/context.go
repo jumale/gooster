@@ -55,7 +55,7 @@ func (ctx *AppContext) Output() io.Writer {
 }
 
 func (ctx *AppContext) Close() error {
-	ctx.log.Debug("Closing context")
+	ctx.log.Info("Closing context")
 
 	// substitute logger with an stdout logger,
 	// in case if some modules will try to send logs after everything is closed
