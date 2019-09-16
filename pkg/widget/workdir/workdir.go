@@ -47,8 +47,8 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetKeyBinding(tview.TreeMoveEnd, rune(tcell.KeyEnd))
 	w.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
 
-	w.Actions.OnWorkDirChange(func(newPath string) {
-		go w.Log.DebugF("WorkDir: set new work dir '%s'", newPath)
+	w.Actions().OnWorkDirChange(func(newPath string) {
+		go w.Log().DebugF("WorkDir: set new work dir '%s'", newPath)
 		root := tview.NewTreeNode(rootNode)
 		root.SetColor(w.cfg.Colors.Lines)
 
@@ -64,11 +64,11 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case w.cfg.Keys.ViewFile:
-			w.Log.Debug(w.view.GetCurrentNode().GetText())
+			w.Log().Debug(w.view.GetCurrentNode().GetText())
 		case w.cfg.Keys.Delete:
-			w.Log.Debug("delete")
+			w.Log().Debug("delete")
 		case w.cfg.Keys.Open:
-			w.Actions.SetWorkDir(fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference()))
+			w.Actions().SetWorkDir(fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference()))
 		}
 		return event
 	})

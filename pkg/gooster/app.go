@@ -14,6 +14,7 @@ type AppConfig struct {
 	InitDir       string
 	LogLevel      log.Level
 	EventsLogPath string
+	Debug         bool
 }
 
 type GridConfig struct {
@@ -23,15 +24,19 @@ type GridConfig struct {
 
 func NewApp(cfg AppConfig) (*App, error) {
 	root := tview.NewApplication()
+	if cfg.Debug {
+		root.SetScreen(NewScreenStub(10, 10))
+	}
+
 	ctx, err := NewAppContext(cfg)
 	if err != nil {
 		return nil, errors.WithMessage(err, "init app context")
 	}
-	ctx.Actions.afterAction = func(e events.Event) {
+	ctx.actions.afterAction = func(e events.Event) {
 		root.Draw()
 	}
 
-	ctx.Log.Debug("Start initializing app")
+	ctx.log.Debug("Start initializing app")
 
 	grid := tview.NewGrid()
 	grid.SetBackgroundColor(tcell.ColorDefault)
@@ -46,16 +51,16 @@ func NewApp(cfg AppConfig) (*App, error) {
 		focusMap: make(map[tcell.Key]tview.Primitive),
 	}
 
-	ctx.Actions.OnWorkDirChange(func(newPath string) {
+	ctx.actions.OnWorkDirChange(func(newPath string) {
 		if err := os.Chdir(newPath); err != nil {
-			ctx.Log.Error(errors.WithMessage(err, "change work dir"))
+			ctx.log.Error(errors.WithMessage(err, "change work dir"))
 		}
 	})
 	if cfg.InitDir == "" {
 		cfg.InitDir = getWd()
 	}
-	ctx.Actions.SetWorkDir(cfg.InitDir)
-	ctx.Log.Debug("App is initialized")
+	ctx.actions.SetWorkDir(cfg.InitDir)
+	ctx.log.Debug("App is initialized")
 
 	return app, nil
 }
@@ -91,11 +96,13 @@ func (app *App) AddWidget(w Widget) {
 		0, 0,
 		cfg.Focused,
 	)
-	app.ctx.Log.DebugF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
+	app.ctx.log.DebugF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
 }
 
 func (app *App) Run() {
-	app.ctx.Log.Debug("Starting App")
+	app.ctx.log.Debug("Starting App")
+	app.root.SetInputCapture(app.handleFocusKeys)
+	app.root.SetInputCapture(app.handleInterrupt)
 
 	defer func() {
 		if err := app.Close(); err != nil {
@@ -103,15 +110,15 @@ func (app *App) Run() {
 		}
 	}()
 
-	app.ctx.EventManager.Start()
-
-	app.root.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if view, ok := app.focusMap[event.Key()]; ok {
-			app.root.SetFocus(view)
+	app.ctx.actions.OnAppExit(func() {
+		app.ctx.log.Debug("Stopping App")
+		if err := app.Close(); err != nil {
+			app.ctx.Log().Error(errors.WithMessage(err, "stopping app"))
 		}
-
-		return event
+		app.root.QueueEvent(tview.NewExitEvent())
 	})
+
+	app.ctx.em.Start()
 
 	app.root.SetRoot(app.grid, true)
 	if err := app.root.Run(); err != nil {
@@ -120,10 +127,28 @@ func (app *App) Run() {
 }
 
 func (app *App) Close() error {
-	app.ctx.Log.Debug("Closing App")
-	if err := app.ctx.EventManager.Close(); err != nil {
-		return errors.WithMessage(err, "closing event manager")
+	app.ctx.log.Debug("Closing App")
+	if err := app.ctx.Close(); err != nil {
+		return errors.WithMessage(err, "closing app context")
 	}
 
 	return nil
+}
+
+func (app *App) handleInterrupt(event *tcell.EventKey) *tcell.EventKey {
+	if event.Key() == tcell.KeyCtrlC {
+		app.ctx.log.Debug("Interrupting latest command")
+		app.ctx.actions.InterruptLatestCommand()
+		return &tcell.EventKey{}
+	}
+
+	return event
+}
+
+func (app *App) handleFocusKeys(event *tcell.EventKey) *tcell.EventKey {
+	if view, ok := app.focusMap[event.Key()]; ok {
+		app.root.SetFocus(view)
+	}
+
+	return event
 }

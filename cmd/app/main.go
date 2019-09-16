@@ -15,8 +15,10 @@ import (
 func main() {
 	args := struct {
 		ShowHelp bool
+		Debug    bool
 	}{
-		ShowHelp: len(os.Args) > 1 && (os.Args[1] == "--help" || os.Args[1] == "-h"),
+		ShowHelp: hasArg("-h") || hasArg("--help"),
+		Debug:    hasArg("-d") || hasArg("--debug"),
 	}
 
 	grid := gooster.GridConfig{
@@ -29,6 +31,7 @@ func main() {
 		LogLevel: log.Debug,
 		Grid:     grid,
 		//EventsLogPath: "/tmp/gooster-events.log",
+		Debug: args.Debug,
 	})
 	if err != nil {
 		panic(err)
@@ -122,4 +125,13 @@ func main() {
 	}))
 
 	shell.Run()
+}
+
+func hasArg(arg string) bool {
+	for _, val := range os.Args {
+		if val == arg {
+			return true
+		}
+	}
+	return false
 }

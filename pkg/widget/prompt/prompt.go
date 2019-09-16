@@ -13,6 +13,7 @@ type Config struct {
 	Colors               ColorsConfig
 	PrintDivider         bool
 	PrintCommand         bool
+	HistoryFile          string
 }
 
 type ColorsConfig struct {
@@ -24,13 +25,17 @@ type ColorsConfig struct {
 }
 
 func NewWidget(cfg Config) *Widget {
-	return &Widget{cfg: cfg}
+	return &Widget{
+		cfg:     cfg,
+		history: newHistory(cfg.HistoryFile),
+	}
 }
 
 type Widget struct {
-	cfg  Config
-	view *tview.InputField
-	cmd  *Command
+	cfg     Config
+	view    *tview.InputField
+	cmd     *Command
+	history *history
 	*gooster.AppContext
 }
 
@@ -42,8 +47,8 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.AppContext = ctx
 	w.cmd = &Command{
 		ctx:    ctx,
-		Stdout: ctx.Output,
-		Stderr: ctx.Output,
+		Stdout: ctx.Output(),
+		Stderr: ctx.Output(),
 	}
 
 	w.view = tview.NewInputField()
@@ -72,11 +77,11 @@ func (w *Widget) processKeyPress(key tcell.Key) {
 	if w.cfg.PrintDivider {
 		_, _, width, _ := w.view.GetInnerRect()
 		div := strings.Repeat("-", width-2)
-		w.Actions.Write(fmt.Sprintf("[%s]%s[-]\n", w.getColorName(w.cfg.Colors.Divider), div))
+		w.Actions().Write(fmt.Sprintf("[%s]%s[-]\n", w.getColorName(w.cfg.Colors.Divider), div))
 	}
 
 	if w.cfg.PrintCommand {
-		w.Actions.Write(fmt.Sprintf("[%s]> %s[-]\n", w.getColorName(w.cfg.Colors.Command), input))
+		w.Actions().Write(fmt.Sprintf("[%s]> %s[-]\n", w.getColorName(w.cfg.Colors.Command), input))
 	}
 
 	switch key {
@@ -84,7 +89,7 @@ func (w *Widget) processKeyPress(key tcell.Key) {
 		w.view.SetText("")
 		err := w.cmd.Run(input)
 		if err != nil {
-			w.Log.Error(err)
+			w.Log().Error(err)
 		}
 	}
 }

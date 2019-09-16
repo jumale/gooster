@@ -5,34 +5,68 @@ import (
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
 	"io"
+	"os"
 )
 
 type AppContext struct {
-	EventManager *events.Manager
-	Log          log.Logger
-	Actions      *actions
-	Output       io.Writer
+	cfg     AppConfig
+	em      *events.DefaultManager
+	log     log.Logger
+	actions *actions
+	output  io.Writer
 }
 
 func NewAppContext(cfg AppConfig) (ctx *AppContext, err error) {
-	ctx = &AppContext{}
+	ctx = &AppContext{cfg: cfg}
 
-	ctx.EventManager, err = events.NewManager(events.ManagerConfig{
-		SubscriberStackLevel: 3,
+	ctx.em, err = events.NewManager(events.ManagerConfig{
+		SubscriberStackLevel: 4,
 		LogFile:              cfg.EventsLogPath,
+		DelayedStart:         true,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "init event manager")
 	}
 
-	ctx.Actions = &actions{
-		em:          ctx.EventManager,
+	ctx.actions = &actions{
+		em:          ctx.em,
 		afterAction: func(e events.Event) {},
 	}
-	ctx.Output = &outputWriter{actions: ctx.Actions}
-	ctx.Log = log.NewSimpleLogger(cfg.LogLevel, ctx.Output)
+	ctx.output = &outputWriter{actions: ctx.actions}
+	ctx.log = log.NewSimpleLogger(cfg.LogLevel, ctx.output)
 
 	return ctx, nil
+}
+
+func (ctx *AppContext) EventManager() events.Manager {
+	return ctx.em
+}
+
+func (ctx *AppContext) Log() log.Logger {
+	return ctx.log
+}
+
+func (ctx *AppContext) Actions() *actions {
+	return ctx.actions
+}
+
+func (ctx *AppContext) Output() io.Writer {
+	return ctx.output
+}
+
+func (ctx *AppContext) Close() error {
+	ctx.log.Debug("Closing context")
+
+	// substitute logger with an stdout logger,
+	// in case if some modules will try to send logs after everything is closed
+	ctx.log = log.NewSimpleLogger(ctx.cfg.LogLevel, os.Stdout)
+
+	err := ctx.em.Close()
+	if err != nil {
+		return errors.WithMessage(err, "closing event manager")
+	}
+
+	return nil
 }
 
 type outputWriter struct {

@@ -15,15 +15,22 @@ type Command struct {
 	ctx    *gooster.AppContext
 }
 
-var pathRegex = regexp.MustCompile(`^\.{1,2}/`)
-
 func (c *Command) Run(input string) error {
-	args := strings.Split(input, " ")
+	c.ctx.Log().DebugF("Executing command `%s`", input)
+
+	// If it's exit command
+	if input == "exit" {
+		go func() {
+			c.ctx.Log().Debug("Executing exit command")
+			c.ctx.Actions().Exit()
+		}()
+		return nil
+	}
 
 	// If it looks like "cd" command:
-	if path := c.detectWorkDirPath(args); path != "" {
-		c.ctx.Log.DebugF("Detected cd path '%s' from args %+v", path, args)
-		c.ctx.Actions.SetWorkDir(path)
+	if path := detectWorkDirPath(input); path != "" {
+		c.ctx.Log().DebugF("Detected cd path '%s' from command '%s'", path, input)
+		c.ctx.Actions().SetWorkDir(path)
 		return nil
 	}
 
@@ -31,6 +38,7 @@ func (c *Command) Run(input string) error {
 	cmd := exec.Command("bash", "-c", input)
 	cmd.Stderr = c.Stderr
 	cmd.Stdout = c.Stdout
+	c.ctx.Log().DebugF("Starting command `%s`", input)
 	err := cmd.Run()
 	// Most commands would return errors like "exit status 1" (e.g. `echo "foo" | grep bar`).
 	// We're not interested in those errors and don't want to flood our log with them,
@@ -42,20 +50,37 @@ func (c *Command) Run(input string) error {
 	}
 }
 
-func (c *Command) detectWorkDirPath(args []string) (path string) {
+var (
+	userHomeDir = os.UserHomeDir
+	getWd       = os.Getwd
+)
+
+var pathRegex = regexp.MustCompile(`^(?:(?:\.{1,2}/)|(?:(?:/[^/]+)+))`)
+
+func detectWorkDirPath(command string) (path string) {
+	args := strings.Split(command, " ")
+
 	if args[0] == "cd" && len(args) >= 2 {
 		path = args[1]
 	} else if pathRegex.MatchString(args[0]) {
 		path = args[0]
 	}
 
+	if path == "" {
+		return ""
+	}
+
 	if strings.HasPrefix(path, "~") {
-		ud, _ := os.UserHomeDir()
+		ud, _ := userHomeDir()
 		path = strings.Replace(path, "~", ud, 1)
 	}
 
+	if strings.HasPrefix(path, "./") {
+		path = strings.Replace(path, "./", "", 1)
+	}
+
 	if !strings.HasPrefix(path, "/") {
-		wd, _ := os.Getwd()
+		wd, _ := getWd()
 		path = strings.Replace(wd+"/"+path, "//", "/", -1)
 	}
 

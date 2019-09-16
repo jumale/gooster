@@ -8,7 +8,17 @@ type Event struct {
 	Data interface{}
 }
 
-type Subscriber func(Event)
+type Handler func(Event)
+
+type Manager interface {
+	Dispatch(Event)
+	Subscribe(EventId, Subscriber)
+}
+
+type Subscriber struct {
+	Handler  Handler
+	Priority int
+}
 
 func (e Event) formattedData() string {
 	return truncateString(toString(e.Data), 80)

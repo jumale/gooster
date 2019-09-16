@@ -43,9 +43,9 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
 	w.view.SetTextColor(w.cfg.Colors.Text)
 
-	w.Actions.OnOutput(func(data []byte) {
+	w.Actions().OnOutput(func(data []byte) {
 		if _, err := w.view.Write(data); err != nil {
-			w.Log.Error(errors.WithMessage(err, "write to output"))
+			w.Log().Error(errors.WithMessage(err, "write to output"))
 		}
 	})
 

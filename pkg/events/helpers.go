@@ -17,7 +17,7 @@ func truncateString(str string, num int) string {
 	return result
 }
 
-func callAsSubscriberId(skip int) subscriberId {
+func getSubscriberIdFromCaller(skip int) subscriberId {
 	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		return "unknown"

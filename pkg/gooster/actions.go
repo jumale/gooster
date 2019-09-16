@@ -5,18 +5,22 @@ import (
 )
 
 const (
-	EventChangeWorkDir events.EventId = "change_work_dir"
-	EventSendOutput                   = "send_output"
+	EventChangeWorkDir    events.EventId = "change_work_dir"
+	EventSendOutput                      = "send_output"
+	EventCommandInterrupt                = "command_interrupt"
+	EventAppExit                         = "app_exit"
 )
 
 type actions struct {
-	em          *events.Manager
+	em          events.Manager
 	afterAction func(e events.Event)
 }
 
 func (a *actions) Dispatch(e events.Event) {
-	a.em.Dispatch(e)
-	a.afterAction(e)
+	go func() {
+		a.em.Dispatch(e)
+		a.afterAction(e)
+	}()
 }
 
 func (a *actions) Subscribe(id events.EventId, es events.Subscriber) {
@@ -31,8 +35,10 @@ func (a *actions) SetWorkDir(path string) {
 }
 
 func (a *actions) OnWorkDirChange(fn func(newPath string)) {
-	a.Subscribe(EventChangeWorkDir, func(event events.Event) {
-		fn(event.Data.(string))
+	a.Subscribe(EventChangeWorkDir, events.Subscriber{
+		Handler: func(event events.Event) {
+			fn(event.Data.(string))
+		},
 	})
 }
 
@@ -51,7 +57,29 @@ func (a *actions) Writeln(data interface{}) {
 }
 
 func (a *actions) OnOutput(fn func(data []byte)) {
-	a.Subscribe(EventSendOutput, func(event events.Event) {
-		fn(toBytes(event.Data))
+	a.Subscribe(EventSendOutput, events.Subscriber{
+		Handler: func(event events.Event) {
+			fn(toBytes(event.Data))
+		},
+	})
+}
+
+func (a *actions) InterruptLatestCommand() {
+	a.Dispatch(events.Event{Id: EventCommandInterrupt})
+}
+
+func (a *actions) OnCommandInterrupt(fn func()) {
+	a.Subscribe(EventCommandInterrupt, events.Subscriber{
+		Handler: func(events.Event) { fn() },
+	})
+}
+
+func (a *actions) Exit() {
+	a.Dispatch(events.Event{Id: EventAppExit})
+}
+
+func (a *actions) OnAppExit(fn func()) {
+	a.Subscribe(EventAppExit, events.Subscriber{
+		Handler: func(event events.Event) { fn() },
 	})
 }

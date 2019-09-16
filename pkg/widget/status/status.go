@@ -46,10 +46,10 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	wd.SetExpansion(2)
 	wd.SetAlign(tview.AlignLeft)
 	w.view.SetCell(0, 0, wd)
-	w.Actions.OnWorkDirChange(func(newPath string) {
+	w.Actions().OnWorkDirChange(func(newPath string) {
 		abs, err := filepath.Abs(newPath)
 		if err != nil {
-			w.Log.Error(err)
+			w.Log().Error(err)
 		} else {
 			wd.SetText(abs)
 		}
