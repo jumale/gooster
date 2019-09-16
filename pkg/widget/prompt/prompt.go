@@ -34,7 +34,7 @@ func NewWidget(cfg Config) *Widget {
 type Widget struct {
 	cfg     Config
 	view    *tview.InputField
-	cmd     *Command
+	cmd     *CmdRunner
 	history *history
 	*gooster.AppContext
 }
@@ -45,7 +45,7 @@ func (w *Widget) Name() string {
 
 func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
 	w.AppContext = ctx
-	w.cmd = &Command{
+	w.cmd = &CmdRunner{
 		ctx:    ctx,
 		Stdout: ctx.Output(),
 		Stderr: ctx.Output(),
@@ -74,6 +74,13 @@ func (w *Widget) processKeyPress(key tcell.Key) {
 		return
 	}
 
+	switch key {
+	case tcell.KeyEnter:
+		w.executeCommand(input)
+	}
+}
+
+func (w *Widget) executeCommand(input string) {
 	if w.cfg.PrintDivider {
 		_, _, width, _ := w.view.GetInnerRect()
 		div := strings.Repeat("-", width-2)
@@ -84,13 +91,14 @@ func (w *Widget) processKeyPress(key tcell.Key) {
 		w.Actions().Write(fmt.Sprintf("[%s]> %s[-]\n", w.getColorName(w.cfg.Colors.Command), input))
 	}
 
-	switch key {
-	case tcell.KeyEnter:
-		w.view.SetText("")
-		err := w.cmd.Run(input)
-		if err != nil {
-			w.Log().Error(err)
-		}
+	w.view.SetText("")
+	err := w.cmd.Run(Command{
+		Cmd:   input,
+		Async: true,
+		Ctx:   nil,
+	})
+	if err != nil {
+		w.Log().Error(err)
 	}
 }
 

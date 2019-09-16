@@ -1,6 +1,7 @@
 package prompt
 
 import (
+	"context"
 	"github.com/jumale/gooster/pkg/gooster"
 	"io"
 	"os"
@@ -10,12 +11,33 @@ import (
 )
 
 type Command struct {
+	Cmd   string
+	Async bool
+	Ctx   context.Context
+}
+
+type CmdRunner struct {
 	Stdout io.Writer
 	Stderr io.Writer
 	ctx    *gooster.AppContext
 }
 
-func (c *Command) Run(input string) error {
+func (c *CmdRunner) Run(cmd Command) error {
+	if cmd.Async {
+		go func() {
+			err := c.run(cmd.Cmd, cmd.Ctx)
+			if err != nil {
+				c.ctx.Log().Error(err)
+			}
+		}()
+		return nil
+
+	} else {
+		return c.run(cmd.Cmd, cmd.Ctx)
+	}
+}
+
+func (c *CmdRunner) run(input string, ctx context.Context) error {
 	c.ctx.Log().DebugF("Executing command `%s`", input)
 
 	// If it's exit command
@@ -35,7 +57,10 @@ func (c *Command) Run(input string) error {
 	}
 
 	// Otherwise just exec the command:
-	cmd := exec.Command("bash", "-c", input)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	cmd := exec.CommandContext(ctx, "bash", "-c", input)
 	cmd.Stderr = c.Stderr
 	cmd.Stdout = c.Stdout
 	c.ctx.Log().DebugF("Starting command `%s`", input)
