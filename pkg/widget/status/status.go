@@ -3,8 +3,11 @@ package status
 import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/pkg/errors"
 	"github.com/rivo/tview"
+	"os/user"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
@@ -47,11 +50,18 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	wd.SetAlign(tview.AlignLeft)
 	w.view.SetCell(0, 0, wd)
 	w.Actions().OnWorkDirChange(func(newPath string) {
-		abs, err := filepath.Abs(newPath)
+		path, err := filepath.Abs(newPath)
 		if err != nil {
-			w.Log().Error(err)
+			w.Log().Error(errors.WithMessage(err, "could not obtain working directory"))
 		} else {
-			wd.SetText(abs)
+			usr, err := user.Current()
+			if err != nil {
+				w.Log().Error(errors.WithMessage(err, "could not obtain user directory"))
+			} else {
+				path = strings.Replace(path, usr.HomeDir, "~", 1)
+			}
+
+			wd.SetText(path)
 		}
 	})
 
