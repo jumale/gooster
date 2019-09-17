@@ -28,10 +28,7 @@ func NewAppContext(cfg AppConfig) (ctx *AppContext, err error) {
 		return nil, errors.WithMessage(err, "init event manager")
 	}
 
-	ctx.actions = &actions{
-		em:          ctx.em,
-		afterAction: func(e events.Event) {},
-	}
+	ctx.actions = newActions(ctx.em)
 	ctx.output = &outputWriter{actions: ctx.actions}
 	ctx.log = log.NewSimpleLogger(cfg.LogLevel, ctx.output)
 
