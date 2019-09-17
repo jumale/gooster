@@ -64,16 +64,22 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case w.cfg.Keys.ViewFile:
-			w.Log().Debug(w.view.GetCurrentNode().GetText())
+			w.Log().Debug("delete " + w.currentPath())
+
 		case w.cfg.Keys.Delete:
-			w.Log().Debug("delete")
+			w.Log().Debug("delete " + w.currentPath())
+
 		case w.cfg.Keys.Open:
-			w.Actions().SetWorkDir(fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference()))
+			w.Actions().SetWorkDir(w.currentPath())
 		}
 		return event
 	})
 
 	return w.view, w.cfg.WidgetConfig, nil
+}
+
+func (w *Widget) currentPath() string {
+	return fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference())
 }
 
 func (w *Widget) addPath(target *tview.TreeNode, path string) {

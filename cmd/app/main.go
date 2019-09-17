@@ -66,7 +66,7 @@ func main() {
 		},
 		Keys: workdir.KeysConfig{
 			ViewFile: tcell.KeyF3,
-			Delete:   tcell.KeyBackspace2,
+			Delete:   tcell.KeyF8,
 			Open:     tcell.KeyEnter,
 		},
 	}))

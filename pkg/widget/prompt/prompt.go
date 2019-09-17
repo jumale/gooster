@@ -60,6 +60,14 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetFieldBackgroundColor(w.cfg.Colors.Bg)
 	w.view.SetFieldTextColor(w.cfg.Colors.Text)
 
+	w.Actions().OnSetPrompt(func(input string) {
+		w.view.SetText(input)
+	})
+
+	w.Actions().OnCommandInterrupt(func() {
+		w.view.SetText("")
+	})
+
 	//w.view.SetAutocompleteFunc(func(currentText string) (entries []string) {
 	//	return []string{"foo", "bar", "baz"}
 	//})

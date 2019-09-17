@@ -120,6 +120,11 @@ func (app *App) Run() {
 		app.root.Stop()
 	})
 
+	app.ctx.actions.OnSetFocus(func(view tview.Primitive) {
+		app.ctx.log.Debug("App: focusing view")
+		app.root.SetFocus(view)
+	})
+
 	app.ctx.em.Start()
 
 	app.root.SetRoot(app.grid, true)
@@ -168,7 +173,7 @@ func (app *App) handleInterrupt(event *tcell.EventKey) (newEvent *tcell.EventKey
 func (app *App) handleFocusKeys(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
 	if view, ok := app.focusMap[event.Key()]; ok {
 		app.ctx.log.Debug("App: focusing view")
-		app.root.SetFocus(view)
+		app.ctx.actions.SetFocus(view)
 		return event, true
 	}
 
