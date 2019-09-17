@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	gooster.WidgetConfig `json:",inline"`
+	gooster.ModuleConfig `json:",inline"`
 	Colors               ColorsConfig
 }
 
@@ -17,21 +17,21 @@ type ColorsConfig struct {
 	Text tcell.Color
 }
 
-func NewWidget(cfg Config) *Widget {
-	return &Widget{cfg: cfg}
+func NewModule(cfg Config) *Module {
+	return &Module{cfg: cfg}
 }
 
-type Widget struct {
+type Module struct {
 	cfg  Config
 	view *tview.TextView
 	*gooster.AppContext
 }
 
-func (w *Widget) Name() string {
+func (w *Module) Name() string {
 	return "output"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 
 	w.view = tview.NewTextView()
@@ -49,5 +49,5 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 		}
 	})
 
-	return w.view, w.cfg.WidgetConfig, nil
+	return w.view, w.cfg.ModuleConfig, nil
 }

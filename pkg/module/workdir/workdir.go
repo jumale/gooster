@@ -12,25 +12,25 @@ import (
 
 const rootNode = "../"
 
-func NewWidget(cfg Config) *Widget {
-	return &Widget{
+func NewModule(cfg Config) *Module {
+	return &Module{
 		cfg:   cfg,
 		paths: make(map[string]*tview.TreeNode),
 	}
 }
 
-type Widget struct {
+type Module struct {
 	cfg  Config
 	view *tview.TreeView
 	*gooster.AppContext
 	paths map[string]*tview.TreeNode
 }
 
-func (w *Widget) Name() string {
+func (w *Module) Name() string {
 	return "work_dir"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 
 	w.view = tview.NewTreeView()
@@ -75,14 +75,14 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 		return event
 	})
 
-	return w.view, w.cfg.WidgetConfig, nil
+	return w.view, w.cfg.ModuleConfig, nil
 }
 
-func (w *Widget) currentPath() string {
+func (w *Module) currentPath() string {
 	return fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference())
 }
 
-func (w *Widget) addPath(target *tview.TreeNode, path string) {
+func (w *Module) addPath(target *tview.TreeNode, path string) {
 	w.paths[path] = target
 
 	files, err := ioutil.ReadDir(path)
@@ -102,7 +102,7 @@ func (w *Widget) addPath(target *tview.TreeNode, path string) {
 	}
 }
 
-func (w *Widget) selectNode(node *tview.TreeNode) {
+func (w *Module) selectNode(node *tview.TreeNode) {
 	reference := node.GetReference()
 	if reference == nil {
 		return // Selecting the root node does nothing.

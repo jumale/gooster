@@ -69,22 +69,22 @@ type App struct {
 	cfg      AppConfig
 	root     *tview.Application
 	grid     *tview.Grid
-	widgets  []Widget
+	modules  []Module
 	ctx      *AppContext
 	focusMap map[tcell.Key]tview.Primitive
 }
 
-func (app *App) AddWidget(w Widget) {
+func (app *App) RegisterModule(w Module) {
 	view, cfg, err := w.Init(app.ctx)
 	if err != nil {
-		panic(errors.WithMessage(err, "init widget"))
+		panic(errors.WithMessage(err, "init module"))
 	}
 
 	if !cfg.Enabled {
 		return
 	}
 
-	app.widgets = append(app.widgets, w)
+	app.modules = append(app.modules, w)
 	if cfg.FocusKey != 0 {
 		app.focusMap[cfg.FocusKey] = view
 	}
@@ -96,7 +96,7 @@ func (app *App) AddWidget(w Widget) {
 		0, 0,
 		cfg.Focused,
 	)
-	app.ctx.log.InfoF("Initializing widget [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
+	app.ctx.log.InfoF("Initializing module [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
 }
 
 func (app *App) Run() {

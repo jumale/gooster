@@ -11,7 +11,7 @@ import (
 )
 
 type Config struct {
-	gooster.WidgetConfig `json:",inline"`
+	gooster.ModuleConfig `json:",inline"`
 	Colors               ColorsConfig
 }
 
@@ -22,21 +22,21 @@ type ColorsConfig struct {
 	K8sContext tcell.Color
 }
 
-func NewWidget(cfg Config) *Widget {
-	return &Widget{cfg: cfg}
+func NewModule(cfg Config) *Module {
+	return &Module{cfg: cfg}
 }
 
-type Widget struct {
+type Module struct {
 	cfg  Config
 	view *tview.Table
 	*gooster.AppContext
 }
 
-func (w *Widget) Name() string {
+func (w *Module) Name() string {
 	return "status_bar"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 
 	w.view = tview.NewTable()
@@ -77,5 +77,5 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	k8sCtx.SetAlign(tview.AlignRight)
 	w.view.SetCell(0, 2, k8sCtx)
 
-	return w.view, w.cfg.WidgetConfig, nil
+	return w.view, w.cfg.ModuleConfig, nil
 }

@@ -8,12 +8,12 @@ import (
 	"sort"
 )
 
-func NewColorNamesWidget(cfg gooster.WidgetConfig) gooster.Widget {
+func NewColorNamesModule(cfg gooster.ModuleConfig) gooster.Module {
 	return &ColorNames{cfg: cfg}
 }
 
 type ColorNames struct {
-	cfg  gooster.WidgetConfig
+	cfg  gooster.ModuleConfig
 	view *tview.TextView
 	*gooster.AppContext
 }
@@ -22,7 +22,7 @@ func (w *ColorNames) Name() string {
 	return "help_colors"
 }
 
-func (w *ColorNames) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *ColorNames) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 
 	w.view = tview.NewTextView()

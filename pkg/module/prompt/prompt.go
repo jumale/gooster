@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	gooster.WidgetConfig `json:",inline"`
+	gooster.ModuleConfig `json:",inline"`
 	Colors               ColorsConfig
 	PrintDivider         bool
 	PrintCommand         bool
@@ -24,14 +24,14 @@ type ColorsConfig struct {
 	Command tcell.Color
 }
 
-func NewWidget(cfg Config) *Widget {
-	return &Widget{
+func NewModule(cfg Config) *Module {
+	return &Module{
 		cfg:     cfg,
 		history: newHistory(cfg.HistoryFile),
 	}
 }
 
-type Widget struct {
+type Module struct {
 	cfg     Config
 	view    *tview.InputField
 	cmd     *CmdRunner
@@ -39,11 +39,11 @@ type Widget struct {
 	*gooster.AppContext
 }
 
-func (w *Widget) Name() string {
+func (w *Module) Name() string {
 	return "prompt"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 	w.cmd = &CmdRunner{
 		ctx:    ctx,
@@ -73,10 +73,10 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	//})
 	w.view.SetDoneFunc(w.processKeyPress)
 
-	return w.view, w.cfg.WidgetConfig, nil
+	return w.view, w.cfg.ModuleConfig, nil
 }
 
-func (w *Widget) processKeyPress(key tcell.Key) {
+func (w *Module) processKeyPress(key tcell.Key) {
 	input := w.view.GetText()
 	if input == "" {
 		return
@@ -88,7 +88,7 @@ func (w *Widget) processKeyPress(key tcell.Key) {
 	}
 }
 
-func (w *Widget) executeCommand(input string) {
+func (w *Module) executeCommand(input string) {
 	if w.cfg.PrintDivider {
 		_, _, width, _ := w.view.GetInnerRect()
 		div := strings.Repeat("-", width-2)
@@ -110,7 +110,7 @@ func (w *Widget) executeCommand(input string) {
 	}
 }
 
-func (w *Widget) getColorName(c tcell.Color) string {
+func (w *Module) getColorName(c tcell.Color) string {
 	for name, value := range tcell.ColorNames {
 		if value == c {
 			return name

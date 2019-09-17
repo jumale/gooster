@@ -4,11 +4,11 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/log"
-	"github.com/jumale/gooster/pkg/widget/help"
-	"github.com/jumale/gooster/pkg/widget/output"
-	"github.com/jumale/gooster/pkg/widget/prompt"
-	"github.com/jumale/gooster/pkg/widget/status"
-	"github.com/jumale/gooster/pkg/widget/workdir"
+	"github.com/jumale/gooster/pkg/module/help"
+	"github.com/jumale/gooster/pkg/module/output"
+	"github.com/jumale/gooster/pkg/module/prompt"
+	"github.com/jumale/gooster/pkg/module/status"
+	"github.com/jumale/gooster/pkg/module/workdir"
 	"os"
 )
 
@@ -37,8 +37,8 @@ func main() {
 		panic(err)
 	}
 
-	shell.AddWidget(help.NewWidget(help.Config{
-		WidgetConfig: gooster.WidgetConfig{
+	shell.RegisterModule(help.NewModule(help.Config{
+		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 0, Row: 0,
 				Width: len(grid.Cols), Height: len(grid.Rows),
@@ -48,8 +48,8 @@ func main() {
 		},
 	}))
 
-	shell.AddWidget(workdir.NewWidget(workdir.Config{
-		WidgetConfig: gooster.WidgetConfig{
+	shell.RegisterModule(workdir.NewModule(workdir.Config{
+		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 0, Row: 1,
 				Width: 1, Height: 3,
@@ -71,8 +71,8 @@ func main() {
 		},
 	}))
 
-	shell.AddWidget(output.NewWidget(output.Config{
-		WidgetConfig: gooster.WidgetConfig{
+	shell.RegisterModule(output.NewModule(output.Config{
+		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 1, Row: 1,
 				Width: 1, Height: 1,
@@ -86,8 +86,8 @@ func main() {
 		},
 	}))
 
-	shell.AddWidget(prompt.NewWidget(prompt.Config{
-		WidgetConfig: gooster.WidgetConfig{
+	shell.RegisterModule(prompt.NewModule(prompt.Config{
+		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 1, Row: 2,
 				Width: 1, Height: 1,
@@ -107,8 +107,8 @@ func main() {
 		},
 	}))
 
-	shell.AddWidget(status.NewWidget(status.Config{
-		WidgetConfig: gooster.WidgetConfig{
+	shell.RegisterModule(status.NewModule(status.Config{
+		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 0, Row: 0,
 				Width: 2, Height: 1,

@@ -8,12 +8,12 @@ import (
 	"sort"
 )
 
-func NewKeyNamesWidget(cfg gooster.WidgetConfig) gooster.Widget {
+func NewKeyNamesModule(cfg gooster.ModuleConfig) gooster.Module {
 	return &KeyNames{cfg: cfg}
 }
 
 type KeyNames struct {
-	cfg  gooster.WidgetConfig
+	cfg  gooster.ModuleConfig
 	view *tview.TextView
 	*gooster.AppContext
 }
@@ -22,7 +22,7 @@ func (w *KeyNames) Name() string {
 	return "help_keys"
 }
 
-func (w *KeyNames) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *KeyNames) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 
 	w.view = tview.NewTextView()

@@ -7,24 +7,24 @@ import (
 )
 
 type Config struct {
-	gooster.WidgetConfig `json:",inline"`
+	gooster.ModuleConfig `json:",inline"`
 }
 
-func NewWidget(cfg Config) *Widget {
-	return &Widget{cfg: cfg}
+func NewModule(cfg Config) *Module {
+	return &Module{cfg: cfg}
 }
 
-type Widget struct {
+type Module struct {
 	cfg  Config
 	view *tview.Grid
 	*gooster.AppContext
 }
 
-func (w *Widget) Name() string {
+func (w *Module) Name() string {
 	return "help"
 }
 
-func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetConfig, error) {
+func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	w.AppContext = ctx
 
 	w.view = tview.NewGrid()
@@ -35,29 +35,29 @@ func (w *Widget) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.WidgetC
 	w.view.SetColumns(-1)
 	w.view.SetRows(-1, -1)
 
-	_ = w.addWidget(ctx, NewColorNamesWidget, gooster.Position{
+	_ = w.addModule(ctx, NewColorNamesModule, gooster.Position{
 		Col: 0, Row: 0,
 		Width: 1, Height: 1,
 	})
-	_ = w.addWidget(ctx, NewKeyNamesWidget, gooster.Position{
+	_ = w.addModule(ctx, NewKeyNamesModule, gooster.Position{
 		Col: 0, Row: 1,
 		Width: 1, Height: 1,
 	})
 
-	return w.view, w.cfg.WidgetConfig, nil
+	return w.view, w.cfg.ModuleConfig, nil
 }
 
-func (w *Widget) addWidget(
+func (w *Module) addModule(
 	ctx *gooster.AppContext,
-	constructor func(gooster.WidgetConfig) gooster.Widget,
+	constructor func(gooster.ModuleConfig) gooster.Module,
 	pos gooster.Position,
 ) error {
-	widget := constructor(gooster.WidgetConfig{
+	module := constructor(gooster.ModuleConfig{
 		Position: pos,
 		Enabled:  true,
 		Focused:  false,
 	})
-	view, _, err := widget.Init(ctx)
+	view, _, err := module.Init(ctx)
 	if err != nil {
 		return err
 	}

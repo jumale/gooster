@@ -5,9 +5,9 @@ import (
 	"github.com/rivo/tview"
 )
 
-type Widget interface {
+type Module interface {
 	Name() string
-	Init(*AppContext) (tview.Primitive, WidgetConfig, error)
+	Init(*AppContext) (tview.Primitive, ModuleConfig, error)
 }
 
 type Position struct {
@@ -17,7 +17,7 @@ type Position struct {
 	Height int `json:"height"`
 }
 
-type WidgetConfig struct {
+type ModuleConfig struct {
 	Position `json:",inline"`
 	Enabled  bool `json:"enabled"`
 	Focused  bool `json:"focused"`

@@ -6,7 +6,7 @@ import (
 )
 
 type Config struct {
-	gooster.WidgetConfig `json:",inline"`
+	gooster.ModuleConfig `json:",inline"`
 	Colors               ColorsConfig `json:"colors"`
 	Keys                 KeysConfig   `json:"keys"`
 }
