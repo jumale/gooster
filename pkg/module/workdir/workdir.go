@@ -3,6 +3,7 @@ package workdir
 import (
 	"fmt"
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/rivo/tview"
 	"io/ioutil"
@@ -53,7 +54,10 @@ func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 		root.SetColor(w.cfg.Colors.Lines)
 
 		wd, _ := os.Getwd()
-		root.SetReference(wd + "/" + rootNode)
+		root.SetReference(Node{
+			Path: wd + "/" + rootNode,
+			Type: DirNode,
+		})
 
 		w.addPath(root, newPath)
 
@@ -64,13 +68,20 @@ func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case w.cfg.Keys.ViewFile:
-			w.Log().Debug("delete " + w.currentPath())
+			w.Log().Debug("view " + w.currentNode().Path)
 
 		case w.cfg.Keys.Delete:
-			w.Log().Debug("delete " + w.currentPath())
+			node := w.currentNode()
+			w.Actions().OpenDialog(dialog.ConfirmDialog{
+				Title:  fmt.Sprintf("Delete %s?", node.Type),
+				Text:   w.formatPath(node.Path, 40),
+				Width:  42,
+				Height: 5,
+				Border: true,
+			})
 
 		case w.cfg.Keys.Open:
-			w.Actions().SetWorkDir(w.currentPath())
+			w.Actions().SetWorkDir(w.currentNode().Path)
 		}
 		return event
 	})
@@ -78,8 +89,19 @@ func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	return w.view, w.cfg.ModuleConfig, nil
 }
 
-func (w *Module) currentPath() string {
-	return fmt.Sprintf("%s", w.view.GetCurrentNode().GetReference())
+func (w *Module) formatPath(path string, limit int) string {
+	//ud, _ := os.UserHomeDir()
+	//if strings.HasPrefix(path, ud) {
+	//	path = strings.Replace(path, ud, "~", 1)
+	//}
+	if limit > 0 && len(path) > limit {
+		path = "..." + path[len(path)-limit+3:]
+	}
+	return path
+}
+
+func (w *Module) currentNode() Node {
+	return w.view.GetCurrentNode().GetReference().(Node)
 }
 
 func (w *Module) addPath(target *tview.TreeNode, path string) {
@@ -91,7 +113,10 @@ func (w *Module) addPath(target *tview.TreeNode, path string) {
 	}
 	for _, file := range files {
 		node := tview.NewTreeNode(file.Name()).
-			SetReference(filepath.Join(path, file.Name())).
+			SetReference(Node{
+				Path: filepath.Join(path, file.Name()),
+				Type: w.getNodeType(file),
+			}).
 			SetSelectable(true).
 			SetColor(w.cfg.Colors.File)
 
@@ -99,6 +124,14 @@ func (w *Module) addPath(target *tview.TreeNode, path string) {
 			node.SetColor(w.cfg.Colors.Folder)
 		}
 		target.AddChild(node)
+	}
+}
+
+func (w *Module) getNodeType(nodeInfo os.FileInfo) NodeType {
+	if nodeInfo.IsDir() {
+		return DirNode
+	} else {
+		return FileNode
 	}
 }
 
@@ -110,8 +143,8 @@ func (w *Module) selectNode(node *tview.TreeNode) {
 	children := node.GetChildren()
 	if len(children) == 0 {
 		// Load and show files in this directory.
-		path := reference.(string)
-		w.addPath(node, path)
+		ref := reference.(Node)
+		w.addPath(node, ref.Path)
 	} else {
 		// Collapse if visible, expand if collapsed.
 		node.SetExpanded(!node.IsExpanded())

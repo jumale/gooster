@@ -1,7 +1,9 @@
 package gooster
 
 import (
+	"fmt"
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
@@ -15,6 +17,7 @@ type AppConfig struct {
 	LogLevel      log.Level
 	EventsLogPath string
 	Debug         bool
+	Dialog        dialog.Config
 }
 
 type GridConfig struct {
@@ -38,17 +41,16 @@ func NewApp(cfg AppConfig) (*App, error) {
 
 	ctx.log.Info("Start initializing app")
 
-	grid := tview.NewGrid()
-	grid.SetBackgroundColor(tcell.ColorDefault)
-	grid.SetColumns(cfg.Grid.Cols...)
-	grid.SetRows(cfg.Grid.Rows...)
+	pages := tview.NewPages()
+	pages.SetBackgroundColor(tcell.ColorDefault)
 
 	app := &App{
-		cfg:      cfg,
-		root:     root,
-		grid:     grid,
-		ctx:      ctx,
-		focusMap: make(map[tcell.Key]tview.Primitive),
+		cfg:       cfg,
+		root:      root,
+		pages:     pages,
+		ctx:       ctx,
+		focusMap:  make(map[tcell.Key]tview.Primitive),
+		dialogMng: newDialogManger(cfg.Dialog, ctx, pages),
 	}
 
 	ctx.actions.OnWorkDirChange(func(newPath string) {
@@ -66,16 +68,17 @@ func NewApp(cfg AppConfig) (*App, error) {
 }
 
 type App struct {
-	cfg      AppConfig
-	root     *tview.Application
-	grid     *tview.Grid
-	modules  []Module
-	ctx      *AppContext
-	focusMap map[tcell.Key]tview.Primitive
+	cfg       AppConfig
+	root      *tview.Application
+	pages     *tview.Pages
+	modules   []moduleDefinition
+	ctx       *AppContext
+	focusMap  map[tcell.Key]tview.Primitive
+	dialogMng *dialogManger
 }
 
-func (app *App) RegisterModule(w Module) {
-	view, cfg, err := w.Init(app.ctx)
+func (app *App) RegisterModule(mod Module) {
+	view, cfg, err := mod.Init(app.ctx)
 	if err != nil {
 		panic(errors.WithMessage(err, "init module"))
 	}
@@ -84,19 +87,16 @@ func (app *App) RegisterModule(w Module) {
 		return
 	}
 
-	app.modules = append(app.modules, w)
+	app.modules = append(app.modules, moduleDefinition{
+		module: mod,
+		view:   view,
+		cfg:    cfg,
+	})
 	if cfg.FocusKey != 0 {
 		app.focusMap[cfg.FocusKey] = view
 	}
 
-	app.grid.AddItem(
-		view,
-		cfg.Row, cfg.Col,
-		cfg.Height, cfg.Width,
-		0, 0,
-		cfg.Focused,
-	)
-	app.ctx.log.InfoF("Initializing module [lightgreen]'%s'[-] with config [lightblue]%+v[-]", w.Name(), cfg)
+	app.ctx.log.InfoF("Initializing module [lightgreen]'%s'[-] with config [lightblue]%+v[-]", mod.Name(), cfg)
 }
 
 func (app *App) Run() {
@@ -104,6 +104,7 @@ func (app *App) Run() {
 	app.root.SetInputCapture(app.createInputHandler(
 		app.handleFocusKeys,
 		app.handleInterrupt,
+		app.handleCloseDialog,
 	))
 
 	defer func() {
@@ -127,7 +128,9 @@ func (app *App) Run() {
 
 	app.ctx.em.Start()
 
-	app.root.SetRoot(app.grid, true)
+	app.newTab()
+	app.root.SetRoot(app.pages, true)
+
 	if err := app.root.Run(); err != nil {
 		panic(errors.WithMessage(err, "run app"))
 	}
@@ -140,6 +143,28 @@ func (app *App) Close() error {
 	}
 
 	return nil
+}
+
+func (app *App) newTab() {
+	app.ctx.log.Debug("Creating new tab")
+	grid := tview.NewGrid()
+	grid.SetBackgroundColor(tcell.ColorDefault)
+	grid.SetColumns(app.cfg.Grid.Cols...)
+	grid.SetRows(app.cfg.Grid.Rows...)
+
+	for _, def := range app.modules {
+		grid.AddItem(
+			def.view,
+			def.cfg.Row, def.cfg.Col,
+			def.cfg.Height, def.cfg.Width,
+			0, 0,
+			def.cfg.Focused,
+		)
+	}
+
+	pageId := fmt.Sprintf("gooster_tab_%d", app.pages.GetPageCount()+1)
+
+	app.pages.AddPage(pageId, grid, true, true)
 }
 
 func (app *App) createInputHandler(
@@ -164,6 +189,17 @@ func (app *App) handleInterrupt(event *tcell.EventKey) (newEvent *tcell.EventKey
 	if event.Key() == tcell.KeyCtrlC {
 		app.ctx.log.Debug("Interrupting latest command")
 		app.ctx.actions.InterruptLatestCommand()
+		return &tcell.EventKey{}, true
+	}
+
+	return event, false
+}
+
+func (app *App) handleCloseDialog(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
+	if event.Key() == tcell.KeyEscape && app.dialogMng.hasDialog {
+		app.ctx.log.Debug("Closing dialog")
+		app.ctx.actions.CloseDialog()
+
 		return &tcell.EventKey{}, true
 	}
 

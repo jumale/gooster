@@ -2,6 +2,7 @@ package gooster
 
 import (
 	"fmt"
+	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/rivo/tview"
 	"math/rand"
@@ -17,6 +18,8 @@ const (
 	eventSetPrompt                       = "set_prompt"
 	eventCommandInterrupt                = "command_interrupt"
 	eventSetFocus                        = "set_focus"
+	eventOpenDialog                      = "open_dialog"
+	eventCloseDialog                     = "close_dialog"
 	eventAppExit                         = "app_exit"
 )
 
@@ -72,6 +75,19 @@ func (a *actions) OnSetPrompt(fn func(input string)) {
 		Handler: func(event events.Event) {
 			fn(event.Data.(string))
 		},
+	})
+}
+
+func (a *actions) OpenDialog(dialog dialog.Dialog) {
+	a.Dispatch(events.Event{
+		Id:   a.withSeed(eventOpenDialog),
+		Data: dialog,
+	})
+}
+
+func (a *actions) CloseDialog() {
+	a.Dispatch(events.Event{
+		Id: a.withSeed(eventCloseDialog),
 	})
 }
 

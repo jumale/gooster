@@ -23,3 +23,9 @@ type ModuleConfig struct {
 	Focused  bool `json:"focused"`
 	FocusKey tcell.Key
 }
+
+type moduleDefinition struct {
+	module Module
+	view   tview.Primitive
+	cfg    ModuleConfig
+}

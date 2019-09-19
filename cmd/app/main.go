@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/jumale/gooster/pkg/module/help"
@@ -32,6 +33,12 @@ func main() {
 		Grid:     grid,
 		//EventsLogPath: "/tmp/gooster-events.log",
 		Debug: args.Debug,
+		Dialog: dialog.Config{
+			Colors: dialog.ColorsConfig{
+				Bg:       tcell.ColorCornflowerBlue,
+				BtnColor: tcell.ColorCornflowerBlue,
+			},
+		},
 	})
 	if err != nil {
 		panic(err)
@@ -102,8 +109,8 @@ func main() {
 			Bg:      tcell.NewHexColor(0x555555),
 			Label:   tcell.ColorLime,
 			Text:    tcell.ColorLightGray,
-			Divider: tcell.ColorLimeGreen,
-			Command: tcell.ColorRoyalBlue,
+			Divider: tcell.ColorLightGreen,
+			Command: tcell.ColorLightSkyBlue,
 		},
 	}))
 
