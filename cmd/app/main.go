@@ -107,12 +107,17 @@ func main() {
 		},
 		PrintDivider: true,
 		PrintCommand: true,
+		HistoryFile:  "~/.bash_history",
 		Colors: prompt.ColorsConfig{
 			Bg:      tcell.NewHexColor(0x555555),
 			Label:   tcell.ColorLime,
 			Text:    tcell.ColorLightGray,
 			Divider: tcell.ColorLightGreen,
 			Command: tcell.ColorLightSkyBlue,
+		},
+		Keys: prompt.KeysConfig{
+			HistoryNext: tcell.KeyDown,
+			HistoryPrev: tcell.KeyUp,
 		},
 	}))
 

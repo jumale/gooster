@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/jumale/gooster/pkg/history"
+	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"strings"
 )
@@ -14,6 +16,7 @@ type Config struct {
 	PrintDivider         bool
 	PrintCommand         bool
 	HistoryFile          string
+	Keys                 KeysConfig
 }
 
 type ColorsConfig struct {
@@ -24,10 +27,15 @@ type ColorsConfig struct {
 	Command tcell.Color
 }
 
+type KeysConfig struct {
+	HistoryNext tcell.Key
+	HistoryPrev tcell.Key
+}
+
 func NewModule(cfg Config) *Module {
 	return &Module{
 		cfg:     cfg,
-		history: newHistory(cfg.HistoryFile),
+		history: history.NewManager(cfg.HistoryFile),
 	}
 }
 
@@ -35,86 +43,116 @@ type Module struct {
 	cfg     Config
 	view    *tview.InputField
 	cmd     *CmdRunner
-	history *history
+	history *history.Manager
 	*gooster.AppContext
 }
 
-func (w *Module) Name() string {
+func (m *Module) Name() string {
 	return "prompt"
 }
 
-func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
-	w.AppContext = ctx
-	w.cmd = &CmdRunner{
+func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
+	m.AppContext = ctx
+	m.history.SetLogger(m.Log()).Load()
+
+	m.cmd = &CmdRunner{
 		ctx:    ctx,
 		Stdout: ctx.Output(),
 		Stderr: ctx.Output(),
 	}
 
-	w.view = tview.NewInputField()
-	w.view.SetLabel(" > ")
-	w.view.SetBorder(false)
+	m.view = tview.NewInputField()
+	m.view.SetLabel(" > ")
+	m.view.SetBorder(false)
 
-	w.view.SetLabelColor(w.cfg.Colors.Label)
-	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
-	w.view.SetFieldBackgroundColor(w.cfg.Colors.Bg)
-	w.view.SetFieldTextColor(w.cfg.Colors.Text)
+	m.view.SetLabelColor(m.cfg.Colors.Label)
+	m.view.SetBackgroundColor(m.cfg.Colors.Bg)
+	m.view.SetFieldBackgroundColor(m.cfg.Colors.Bg)
+	m.view.SetFieldTextColor(m.cfg.Colors.Text)
 
-	w.Actions().OnSetPrompt(func(input string) {
-		w.view.SetText(input)
+	m.Actions().OnSetPrompt(func(input string) {
+		m.view.SetText(input)
 	})
 
-	w.Actions().OnCommandInterrupt(func() {
-		w.view.SetText("")
+	m.Actions().OnCommandInterrupt(func() {
+		m.view.SetText("")
+		m.history.Reset()
 	})
 
-	//w.view.SetAutocompleteFunc(func(currentText string) (entries []string) {
+	m.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case m.cfg.Keys.HistoryNext:
+			if cmd := m.history.Next(); cmd != "" {
+				m.view.SetText(cmd)
+			}
+			return &tcell.EventKey{}
+
+		case m.cfg.Keys.HistoryPrev:
+			if cmd := m.history.Prev(); cmd != "" {
+				m.view.SetText(cmd)
+			}
+			return &tcell.EventKey{}
+		}
+		return event
+	})
+
+	//m.view.SetAutocompleteFunc(func(currentText string) (entries []string) {
 	//	return []string{"foo", "bar", "baz"}
 	//})
-	w.view.SetDoneFunc(w.processKeyPress)
+	m.view.SetDoneFunc(m.processKeyPress)
 
-	return w.view, w.cfg.ModuleConfig, nil
+	return m.view, m.cfg.ModuleConfig, nil
 }
 
-func (w *Module) processKeyPress(key tcell.Key) {
-	input := w.view.GetText()
+func (m *Module) processKeyPress(key tcell.Key) {
+	input := m.view.GetText()
 	if input == "" {
 		return
 	}
 
 	switch key {
 	case tcell.KeyEnter:
-		w.executeCommand(input)
+		m.executeCommand(input)
 	}
 }
 
-func (w *Module) executeCommand(input string) {
-	if w.cfg.PrintDivider {
-		_, _, width, _ := w.view.GetInnerRect()
+func (m *Module) executeCommand(input string) {
+	if m.cfg.PrintDivider {
+		_, _, width, _ := m.view.GetInnerRect()
 		div := strings.Repeat("-", width-2)
-		w.Actions().Write(fmt.Sprintf("[%s]%s[-]\n", w.getColorName(w.cfg.Colors.Divider), div))
+		m.Actions().Write(fmt.Sprintf("[%s]%s[-]\n", m.getColorName(m.cfg.Colors.Divider), div))
 	}
 
-	if w.cfg.PrintCommand {
-		w.Actions().Write(fmt.Sprintf("[%s]> %s[-]\n", w.getColorName(w.cfg.Colors.Command), input))
+	if m.cfg.PrintCommand {
+		m.Actions().Write(fmt.Sprintf("[%s]> %s[-]\n", m.getColorName(m.cfg.Colors.Command), input))
 	}
 
-	w.view.SetText("")
-	err := w.cmd.Run(Command{
+	m.history.Add(input)
+	m.view.SetText("")
+	err := m.cmd.Run(Command{
 		Cmd:   input,
 		Async: true,
 		Ctx:   nil,
 	})
-	if err != nil {
-		w.Log().Error(err)
-	}
+	m.check(err)
 }
 
-func (w *Module) getColorName(c tcell.Color) string {
+func (m *Module) getColorName(c tcell.Color) string {
 	for name, value := range tcell.ColorNames {
 		if value == c {
 			return name
 		}
 	}
 	return "black"
+}
+
+func (m *Module) check(err error, msg ...string) {
+	if err == nil {
+		return
+	}
+	if len(msg) > 0 {
+		m.Log().Error(errors.WithMessage(err, msg[0]))
+	} else {
+		m.Log().Error(err)
+	}
 }

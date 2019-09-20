@@ -5,6 +5,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"io"
+	"runtime"
+	"strings"
 	"time"
 )
 
@@ -21,9 +23,11 @@ func (l *SimpleLogger) log(level Level, msg string) {
 	if level < l.level {
 		return
 	}
-	now := time.Now().Format("2006-01-02 15:04:05")
+	now := time.Now().Format("15:04:05")
 	color := LevelColor(level)
-	prefix := tview.Escape(fmt.Sprintf("[%s] [%s]", now, LevelName(level)))
+	_, file, line, _ := runtime.Caller(2)
+	parts := strings.Split(file, "/")
+	prefix := tview.Escape(fmt.Sprintf("%s [%s] %s:%d", now, LevelName(level), parts[len(parts)-1], line))
 
 	_, err := l.target.Write([]byte(fmt.Sprintf("[%s]%s[-] %s\n", color, prefix, msg)))
 	if err != nil {
