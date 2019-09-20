@@ -22,104 +22,107 @@ func NewModule(cfg Config) *Module {
 }
 
 type Module struct {
-	cfg  Config
-	view *tview.TreeView
+	cfg     Config
+	view    *tview.TreeView
+	paths   map[string]*tview.TreeNode
+	workDir string
 	*gooster.AppContext
-	paths map[string]*tview.TreeNode
 }
 
-func (w *Module) Name() string {
+func (m *Module) Name() string {
 	return "work_dir"
 }
 
-func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
-	w.AppContext = ctx
+func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
+	m.AppContext = ctx
 
-	w.view = tview.NewTreeView()
-	w.view.SetBorder(false)
-	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
-	w.view.SetGraphicsColor(w.cfg.Colors.Lines)
-	w.view.SetSelectedFunc(w.selectNode)
+	m.view = tview.NewTreeView()
+	m.view.SetBorder(false)
+	m.view.SetBackgroundColor(m.cfg.Colors.Bg)
+	m.view.SetGraphicsColor(m.cfg.Colors.Lines)
+	m.view.SetSelectedFunc(m.selectNode)
 
-	w.view.SetKeyBinding(tview.TreeMoveUp, rune(tcell.KeyUp))
-	w.view.SetKeyBinding(tview.TreeMoveDown, rune(tcell.KeyDown))
-	w.view.SetKeyBinding(tview.TreeMovePageUp, rune(tcell.KeyPgUp))
-	w.view.SetKeyBinding(tview.TreeMovePageDown, rune(tcell.KeyPgDn))
-	w.view.SetKeyBinding(tview.TreeMoveHome, rune(tcell.KeyHome))
-	w.view.SetKeyBinding(tview.TreeMoveEnd, rune(tcell.KeyEnd))
-	w.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
+	m.view.SetKeyBinding(tview.TreeMoveUp, rune(tcell.KeyUp))
+	m.view.SetKeyBinding(tview.TreeMoveDown, rune(tcell.KeyDown))
+	m.view.SetKeyBinding(tview.TreeMovePageUp, rune(tcell.KeyPgUp))
+	m.view.SetKeyBinding(tview.TreeMovePageDown, rune(tcell.KeyPgDn))
+	m.view.SetKeyBinding(tview.TreeMoveHome, rune(tcell.KeyHome))
+	m.view.SetKeyBinding(tview.TreeMoveEnd, rune(tcell.KeyEnd))
+	m.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
 
-	w.Actions().OnWorkDirChange(func(newPath string) {
-		go w.Log().DebugF("WorkDir: set new work dir '%s'", newPath)
-		root := tview.NewTreeNode(rootNode)
-		root.SetColor(w.cfg.Colors.Lines)
-
-		wd, _ := os.Getwd()
-		root.SetReference(Node{
-			Path: wd + "/" + rootNode,
-			Type: DirNode,
-		})
-
-		w.addPath(root, newPath)
-
-		w.view.SetRoot(root)
-		w.view.SetCurrentNode(root)
+	m.Actions().OnWorkDirChange(func(newPath string) {
+		m.workDir = newPath
+		m.refreshTree(newPath)
 	})
 
-	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	m.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case w.cfg.Keys.NewFile:
-			w.Actions().OpenDialog(dialog.Input{
+		case m.cfg.Keys.NewFile:
+			m.Actions().OpenDialog(dialog.Input{
 				Title: "Create a new file",
 				Label: "File Name",
-				OnOk:  w.createFile,
+				OnOk:  m.createFile,
 				Log:   ctx.Log(),
 			})
 
-		case w.cfg.Keys.View:
-			w.viewFile(w.currentNode().Path)
+		case m.cfg.Keys.View:
+			m.viewFile(m.currentNode().Path)
 
-		case w.cfg.Keys.Delete:
-			node := w.currentNode()
-			w.Actions().OpenDialog(dialog.Confirm{
+		case m.cfg.Keys.Delete:
+			node := m.currentNode()
+			m.Actions().OpenDialog(dialog.Confirm{
 				Title: fmt.Sprintf("Delete %s?", node.Type),
-				Text:  w.formatPath(node.Path, 40),
+				Text:  m.formatPath(node.Path, 40),
 				OnOk: func(form *tview.Form) {
-					w.deleteFile(node.Path)
+					m.deleteNode(node)
 				},
 				Log: ctx.Log(),
 			})
 
-		case w.cfg.Keys.Enter:
-			w.enterNode(w.currentNode())
+		case m.cfg.Keys.Enter:
+			m.enterNode(m.currentNode())
 		}
 		return event
 	})
 
-	return w.view, w.cfg.ModuleConfig, nil
+	return m.view, m.cfg.ModuleConfig, nil
 }
 
-func (w *Module) createFile(name string) {
-	w.Log().DebugF("creating file '%s'", name)
-}
-
-func (w *Module) viewFile(path string) {
-	w.Log().DebugF("viewing file '%s'", path)
-}
-
-func (w *Module) deleteFile(path string) {
-	w.Log().DebugF("deleting file '%s'", path)
-}
-
-func (w *Module) enterNode(node Node) {
-	if node.Type == DirNode {
-		w.Actions().SetWorkDir(node.Path)
+func (m *Module) createFile(name string) {
+	emptyFile, err := os.Create(name)
+	if err != nil {
+		m.Log().Error(err)
+	} else if err = emptyFile.Close(); err != nil {
+		m.Log().Error(err)
 	} else {
-		w.Log().DebugF("editing file '%s'", node.Path)
+		m.refreshTree(m.workDir)
+		m.setCurrentNodeByName(name)
 	}
 }
 
-func (w *Module) formatPath(path string, limit int) string {
+func (m *Module) viewFile(path string) {
+	m.Log().DebugF("viewing file '%s'", path)
+}
+
+func (m *Module) deleteNode(node *Node) {
+	if err := os.RemoveAll(node.Path); err != nil {
+		m.Log().Error(err)
+	} else {
+		m.refreshTree(m.workDir)
+		nextNodePath := node.Next.GetReference().(*Node).Path
+		m.setCurrentNode(m.paths[nextNodePath])
+	}
+}
+
+func (m *Module) enterNode(node *Node) {
+	if node.Type == DirNode {
+		m.Actions().SetWorkDir(node.Path)
+	} else {
+		m.Log().DebugF("editing file '%s'", node.Path)
+	}
+}
+
+func (m *Module) formatPath(path string, limit int) string {
 	ud, _ := os.UserHomeDir()
 	if strings.HasPrefix(path, ud) {
 		path = strings.Replace(path, ud, "~", 1)
@@ -130,34 +133,78 @@ func (w *Module) formatPath(path string, limit int) string {
 	return path
 }
 
-func (w *Module) currentNode() Node {
-	return w.view.GetCurrentNode().GetReference().(Node)
+func (m *Module) currentNode() *Node {
+	return m.view.GetCurrentNode().GetReference().(*Node)
 }
 
-func (w *Module) addPath(target *tview.TreeNode, path string) {
-	w.paths[path] = target
+func (m *Module) setCurrentNode(node *tview.TreeNode) {
+	m.view.SetCurrentNode(node)
+}
+
+func (m *Module) setCurrentNodeByName(name string) {
+	for _, child := range m.view.GetRoot().GetChildren() {
+		if child.GetText() == name {
+			m.setCurrentNode(child)
+		}
+	}
+}
+
+func (m *Module) refreshTree(rootPath string) {
+	go m.Log().DebugF("WorkDir: set new work dir '%s'", rootPath)
+	root := tview.NewTreeNode(rootNode)
+	root.SetColor(m.cfg.Colors.Lines)
+
+	wd, _ := os.Getwd()
+	root.SetReference(&Node{
+		Path: wd + "/" + rootNode,
+		Type: DirNode,
+	})
+
+	m.addPath(root, rootPath)
+
+	m.view.SetRoot(root)
+	m.view.SetCurrentNode(root)
+}
+
+func (m *Module) addPath(target *tview.TreeNode, path string) {
+	m.paths[path] = target
 
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return
 	}
+
+	var prevNode *tview.TreeNode
+	var prevRef *Node
+
 	for _, file := range files {
+		ref := &Node{
+			Path: filepath.Join(path, file.Name()),
+			Type: m.getNodeType(file),
+			Prev: prevNode,
+		}
+
 		node := tview.NewTreeNode(file.Name()).
-			SetReference(Node{
-				Path: filepath.Join(path, file.Name()),
-				Type: w.getNodeType(file),
-			}).
+			SetReference(ref).
 			SetSelectable(true).
-			SetColor(w.cfg.Colors.File)
+			SetColor(m.cfg.Colors.File)
+
+		if prevRef != nil {
+			prevRef.Next = node
+		}
 
 		if file.IsDir() {
-			node.SetColor(w.cfg.Colors.Folder)
+			node.SetColor(m.cfg.Colors.Folder)
 		}
 		target.AddChild(node)
+
+		m.paths[ref.Path] = node
+		prevNode = node
+		prevRef = ref
 	}
 }
 
-func (w *Module) getNodeType(nodeInfo os.FileInfo) NodeType {
+func (m *Module) getNodeType(nodeInfo os.FileInfo) NodeType {
 	if nodeInfo.IsDir() {
 		return DirNode
 	} else {
@@ -165,7 +212,7 @@ func (w *Module) getNodeType(nodeInfo os.FileInfo) NodeType {
 	}
 }
 
-func (w *Module) selectNode(node *tview.TreeNode) {
+func (m *Module) selectNode(node *tview.TreeNode) {
 	reference := node.GetReference()
 	if reference == nil {
 		return // Selecting the root node does nothing.
@@ -173,8 +220,8 @@ func (w *Module) selectNode(node *tview.TreeNode) {
 	children := node.GetChildren()
 	if len(children) == 0 {
 		// Load and show files in this directory.
-		ref := reference.(Node)
-		w.addPath(node, ref.Path)
+		ref := reference.(*Node)
+		m.addPath(node, ref.Path)
 	} else {
 		// Collapse if visible, expand if collapsed.
 		node.SetExpanded(!node.IsExpanded())
