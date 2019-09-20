@@ -19,7 +19,9 @@ type ColorsConfig struct {
 }
 
 type KeysConfig struct {
-	ViewFile tcell.Key `json:"view_file"`
-	Delete   tcell.Key `json:"delete"`
-	Open     tcell.Key `json:"open"`
+	NewFile tcell.Key `json:"new_file"`
+	NewDir  tcell.Key `json:"new_dir"`
+	View    tcell.Key `json:"view"`
+	Delete  tcell.Key `json:"delete"`
+	Enter   tcell.Key `json:"enter"`
 }

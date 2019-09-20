@@ -6,8 +6,7 @@ import (
 )
 
 type Dialog interface {
-	View(cfg Config) tview.Primitive
-	Size() (width int, height int)
+	View(cfg Config, onDone ActionHandler) tview.Primitive
 }
 
 type Config struct {

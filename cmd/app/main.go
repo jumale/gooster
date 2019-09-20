@@ -72,9 +72,11 @@ func main() {
 			File:   tcell.ColorLightSteelBlue,
 		},
 		Keys: workdir.KeysConfig{
-			ViewFile: tcell.KeyF3,
-			Delete:   tcell.KeyF8,
-			Open:     tcell.KeyEnter,
+			NewFile: tcell.KeyF2,
+			View:    tcell.KeyF3,
+			NewDir:  tcell.KeyF7,
+			Delete:  tcell.KeyF8,
+			Enter:   tcell.KeyEnter,
 		},
 	}))
 

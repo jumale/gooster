@@ -45,12 +45,17 @@ func NewApp(cfg AppConfig) (*App, error) {
 	pages.SetBackgroundColor(tcell.ColorDefault)
 
 	app := &App{
-		cfg:       cfg,
-		root:      root,
-		pages:     pages,
-		ctx:       ctx,
-		focusMap:  make(map[tcell.Key]tview.Primitive),
-		dialogMng: newDialogManger(cfg.Dialog, ctx, pages),
+		cfg:      cfg,
+		root:     root,
+		pages:    pages,
+		ctx:      ctx,
+		focusMap: make(map[tcell.Key]tview.Primitive),
+		modal:    newModalManger(cfg.Dialog, ctx, pages),
+	}
+	app.modal.onClose = func() {
+		if app.lastFocus != nil {
+			app.root.SetFocus(app.lastFocus)
+		}
 	}
 
 	ctx.actions.OnWorkDirChange(func(newPath string) {
@@ -74,7 +79,8 @@ type App struct {
 	modules   []moduleDefinition
 	ctx       *AppContext
 	focusMap  map[tcell.Key]tview.Primitive
-	dialogMng *dialogManger
+	lastFocus tview.Primitive
+	modal     *modalManger
 }
 
 func (app *App) RegisterModule(mod Module) {
@@ -106,6 +112,7 @@ func (app *App) Run() {
 		app.handleInterrupt,
 		app.handleCloseDialog,
 	))
+	tview.NewModal()
 
 	defer func() {
 		if err := app.Close(); err != nil {
@@ -196,11 +203,11 @@ func (app *App) handleInterrupt(event *tcell.EventKey) (newEvent *tcell.EventKey
 }
 
 func (app *App) handleCloseDialog(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
-	if event.Key() == tcell.KeyEscape && app.dialogMng.hasDialog {
+	if event.Key() == tcell.KeyEscape && app.modal.isOpen {
 		app.ctx.log.Debug("Closing dialog")
 		app.ctx.actions.CloseDialog()
 
-		return &tcell.EventKey{}, true
+		return event, true
 	}
 
 	return event, false
@@ -210,6 +217,7 @@ func (app *App) handleFocusKeys(event *tcell.EventKey) (newEvent *tcell.EventKey
 	if view, ok := app.focusMap[event.Key()]; ok {
 		app.ctx.log.Debug("App: focusing view")
 		app.ctx.actions.SetFocus(view)
+		app.lastFocus = view
 		return event, true
 	}
 

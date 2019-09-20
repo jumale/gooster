@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const rootNode = "../"
@@ -67,21 +68,30 @@ func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 
 	w.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
-		case w.cfg.Keys.ViewFile:
-			w.Log().Debug("view " + w.currentNode().Path)
+		case w.cfg.Keys.NewFile:
+			w.Actions().OpenDialog(dialog.Input{
+				Title: "Create a new file",
+				Label: "File Name",
+				OnOk:  w.createFile,
+				Log:   ctx.Log(),
+			})
+
+		case w.cfg.Keys.View:
+			w.viewFile(w.currentNode().Path)
 
 		case w.cfg.Keys.Delete:
 			node := w.currentNode()
-			w.Actions().OpenDialog(dialog.ConfirmDialog{
-				Title:  fmt.Sprintf("Delete %s?", node.Type),
-				Text:   w.formatPath(node.Path, 40),
-				Width:  42,
-				Height: 5,
-				Border: true,
+			w.Actions().OpenDialog(dialog.Confirm{
+				Title: fmt.Sprintf("Delete %s?", node.Type),
+				Text:  w.formatPath(node.Path, 40),
+				OnOk: func(form *tview.Form) {
+					w.deleteFile(node.Path)
+				},
+				Log: ctx.Log(),
 			})
 
-		case w.cfg.Keys.Open:
-			w.Actions().SetWorkDir(w.currentNode().Path)
+		case w.cfg.Keys.Enter:
+			w.enterNode(w.currentNode())
 		}
 		return event
 	})
@@ -89,11 +99,31 @@ func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	return w.view, w.cfg.ModuleConfig, nil
 }
 
+func (w *Module) createFile(name string) {
+	w.Log().DebugF("creating file '%s'", name)
+}
+
+func (w *Module) viewFile(path string) {
+	w.Log().DebugF("viewing file '%s'", path)
+}
+
+func (w *Module) deleteFile(path string) {
+	w.Log().DebugF("deleting file '%s'", path)
+}
+
+func (w *Module) enterNode(node Node) {
+	if node.Type == DirNode {
+		w.Actions().SetWorkDir(node.Path)
+	} else {
+		w.Log().DebugF("editing file '%s'", node.Path)
+	}
+}
+
 func (w *Module) formatPath(path string, limit int) string {
-	//ud, _ := os.UserHomeDir()
-	//if strings.HasPrefix(path, ud) {
-	//	path = strings.Replace(path, ud, "~", 1)
-	//}
+	ud, _ := os.UserHomeDir()
+	if strings.HasPrefix(path, ud) {
+		path = strings.Replace(path, ud, "~", 1)
+	}
 	if limit > 0 && len(path) > limit {
 		path = "..." + path[len(path)-limit+3:]
 	}
