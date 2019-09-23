@@ -4,22 +4,32 @@ import (
 	"bufio"
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
+	"io"
 	"os"
 	"strings"
 )
 
 type Manager struct {
-	set      map[string]struct{}
-	stack    []string
-	index    int
-	filePath string
-	log      log.Logger
+	set           map[string]struct{}
+	stack         []string
+	index         int
+	filePath      string
+	log           log.Logger
+	openReadFile  func(path string) (io.ReadCloser, error)
+	openWriteFile func(path string) (io.WriteCloser, error)
 }
 
 func NewManager(historyFile string) *Manager {
 	mng := &Manager{
-		set: make(map[string]struct{}),
-		log: log.EmptyLogger{},
+		index: -1,
+		set:   make(map[string]struct{}),
+		log:   log.EmptyLogger{},
+		openReadFile: func(path string) (io.ReadCloser, error) {
+			return os.Open(path)
+		},
+		openWriteFile: func(path string) (io.WriteCloser, error) {
+			return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		},
 	}
 
 	if strings.HasPrefix(historyFile, "~") {
@@ -33,7 +43,7 @@ func NewManager(historyFile string) *Manager {
 }
 
 func (h *Manager) Load() *Manager {
-	f, err := os.Open(h.filePath)
+	f, err := h.openReadFile(h.filePath)
 	if err != nil {
 		h.log.Error(errors.WithMessage(err, "loading bash history file"))
 	}
@@ -86,7 +96,7 @@ func (h *Manager) Prev() string {
 	}
 
 	if h.index < 0 {
-		h.index = ln - 1
+		h.index = ln
 	}
 	h.index--
 	if h.index < 0 {
@@ -119,7 +129,7 @@ func (h *Manager) SetLogger(log log.Logger) *Manager {
 }
 
 func (h *Manager) write(cmd string) {
-	f, err := os.OpenFile(h.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := h.openWriteFile(h.filePath)
 	if err != nil {
 		h.log.Error(errors.WithMessage(err, "opening hash history file"))
 	}
@@ -129,7 +139,7 @@ func (h *Manager) write(cmd string) {
 		}
 	}()
 
-	if _, err := f.WriteString(cmd + "\n"); err != nil {
+	if _, err := f.Write([]byte(cmd + "\n")); err != nil {
 		h.log.Error(errors.WithMessage(err, "writing to bash history file"))
 	}
 }

@@ -82,15 +82,11 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	m.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case m.cfg.Keys.HistoryNext:
-			if cmd := m.history.Next(); cmd != "" {
-				m.view.SetText(cmd)
-			}
+			m.view.SetText(m.history.Next())
 			return &tcell.EventKey{}
 
 		case m.cfg.Keys.HistoryPrev:
-			if cmd := m.history.Prev(); cmd != "" {
-				m.view.SetText(cmd)
-			}
+			m.view.SetText(m.history.Prev())
 			return &tcell.EventKey{}
 		}
 		return event
