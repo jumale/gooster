@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"io/ioutil"
 	"os"
@@ -59,9 +60,17 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 		switch event.Key() {
 		case m.cfg.Keys.NewFile:
 			m.Actions().OpenDialog(dialog.Input{
-				Title: "Create a new file",
+				Title: "New file",
 				Label: "File Name",
 				OnOk:  m.createFile,
+				Log:   ctx.Log(),
+			})
+
+		case m.cfg.Keys.NewDir:
+			m.Actions().OpenDialog(dialog.Input{
+				Title: "New dir",
+				Label: "Dir Name",
+				OnOk:  m.createDir,
 				Log:   ctx.Log(),
 			})
 
@@ -89,14 +98,34 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 }
 
 func (m *Module) createFile(name string) {
+	parts := filepath.SplitList(name)
+	if len(parts) > 0 {
+		dir := filepath.Dir(name)
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			m.Log().Error(errors.WithMessage(err, "creating directory"))
+		}
+	}
+
 	emptyFile, err := os.Create(name)
 	if err != nil {
 		m.Log().Error(err)
 	} else if err = emptyFile.Close(); err != nil {
-		m.Log().Error(err)
+		m.Log().Error(errors.WithMessage(err, "creating file"))
 	} else {
 		m.refreshTree(m.workDir)
 		m.setCurrentNodeByName(name)
+	}
+}
+
+func (m *Module) createDir(dirPath string) {
+	err := os.MkdirAll(dirPath, 0755)
+	if err != nil {
+		m.Log().Error(errors.WithMessage(err, "creating directory"))
+	} else {
+		m.refreshTree(m.workDir)
+		parts := filepath.SplitList(dirPath)
+		m.setCurrentNodeByName(parts[0])
 	}
 }
 
@@ -106,7 +135,7 @@ func (m *Module) viewFile(path string) {
 
 func (m *Module) deleteNode(node *Node) {
 	if err := os.RemoveAll(node.Path); err != nil {
-		m.Log().Error(err)
+		m.Log().Error(errors.WithMessage(err, "removing file/directory"))
 	} else {
 		m.refreshTree(m.workDir)
 		nextNodePath := node.Next.GetReference().(*Node).Path
