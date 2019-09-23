@@ -11,15 +11,18 @@ import (
 	"github.com/jumale/gooster/pkg/module/status"
 	"github.com/jumale/gooster/pkg/module/workdir"
 	"os"
+	"strings"
 )
 
 func main() {
 	args := struct {
 		ShowHelp bool
 		Debug    bool
+		LogLevel log.Level
 	}{
-		ShowHelp: hasArg("-h") || hasArg("--help"),
-		Debug:    hasArg("-d") || hasArg("--debug"),
+		ShowHelp: hasArg("-h", "--help"),
+		Debug:    hasArg("-d", "--debug"),
+		LogLevel: log.LevelFromString(getArg("-l", "--log")),
 	}
 
 	grid := gooster.GridConfig{
@@ -29,7 +32,7 @@ func main() {
 
 	shell, err := gooster.NewApp(gooster.AppConfig{
 		//InitDir:  "/Users/yurii.maltsev/Dev/src",
-		LogLevel: log.Debug,
+		LogLevel: args.LogLevel,
 		Grid:     grid,
 		//EventsLogPath: "/tmp/gooster-events.log",
 		Debug: args.Debug,
@@ -141,11 +144,24 @@ func main() {
 	shell.Run()
 }
 
-func hasArg(arg string) bool {
-	for _, val := range os.Args {
-		if val == arg {
-			return true
+func hasArg(names ...string) bool {
+	for _, arg := range names {
+		for _, val := range os.Args {
+			if val == arg {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+func getArg(names ...string) string {
+	for _, arg := range names {
+		for _, val := range os.Args {
+			if strings.HasPrefix(val, arg) {
+				return strings.Split(val, "=")[1]
+			}
+		}
+	}
+	return ""
 }

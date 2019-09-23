@@ -1,5 +1,7 @@
 package log
 
+import "strings"
+
 type Level int
 
 const (
@@ -27,7 +29,7 @@ type Logger interface {
 	FatalF(msg string, args ...interface{})
 }
 
-func LevelName(l Level) string {
+func (l Level) String() string {
 	switch l {
 	case Debug:
 		return "DEBUG"
@@ -44,7 +46,7 @@ func LevelName(l Level) string {
 	}
 }
 
-func LevelColor(l Level) string {
+func (l Level) Color() string {
 	switch l {
 	case Debug:
 		return "gray"
@@ -58,5 +60,22 @@ func LevelColor(l Level) string {
 		return "red"
 	default:
 		return "red"
+	}
+}
+
+func LevelFromString(val string) Level {
+	switch strings.ToUpper(val) {
+	case "DEBUG":
+		return Debug
+	case "INFO":
+		return Info
+	case "WARN":
+		return Warn
+	case "ERROR":
+		return Error
+	case "FATAL":
+		return Fatal
+	default:
+		return Warn
 	}
 }

@@ -24,10 +24,10 @@ func (l *SimpleLogger) log(level Level, msg string) {
 		return
 	}
 	now := time.Now().Format("15:04:05")
-	color := LevelColor(level)
+	color := level.Color()
 	_, file, line, _ := runtime.Caller(2)
 	parts := strings.Split(file, "/")
-	prefix := tview.Escape(fmt.Sprintf("%s [%s] %s:%d", now, LevelName(level), parts[len(parts)-1], line))
+	prefix := tview.Escape(fmt.Sprintf("%s [%s] %s:%d", now, level, parts[len(parts)-1], line))
 
 	_, err := l.target.Write([]byte(fmt.Sprintf("[%s]%s[-] %s\n", color, prefix, msg)))
 	if err != nil {
