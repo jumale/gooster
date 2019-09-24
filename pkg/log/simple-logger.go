@@ -74,3 +74,13 @@ func (l *SimpleLogger) Fatal(v ...interface{}) {
 func (l *SimpleLogger) FatalF(msg string, args ...interface{}) {
 	l.log(Fatal, fmt.Sprintf(msg, args...))
 }
+
+func (l *SimpleLogger) Check(err error, msgAndArgs ...string) {
+	if err == nil {
+		return
+	}
+	if len(msgAndArgs) > 0 {
+		err = errors.WithMessage(err, fmt.Sprintf(msgAndArgs[0], msgAndArgs[1:]))
+	}
+	l.Error(err)
+}

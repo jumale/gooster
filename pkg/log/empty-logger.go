@@ -21,3 +21,5 @@ func (e EmptyLogger) ErrorF(msg string, args ...interface{}) {}
 func (e EmptyLogger) Fatal(v ...interface{}) {}
 
 func (e EmptyLogger) FatalF(msg string, args ...interface{}) {}
+
+func (e EmptyLogger) Check(err error, msg ...string) {}

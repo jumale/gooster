@@ -27,6 +27,8 @@ type Logger interface {
 
 	Fatal(v ...interface{})
 	FatalF(msg string, args ...interface{})
+
+	Check(err error, msg ...string)
 }
 
 func (l Level) String() string {
