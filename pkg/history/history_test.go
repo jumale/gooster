@@ -1,63 +1,63 @@
 package history
 
 import (
-	"github.com/jumale/gooster/pkg/stub"
+	"github.com/jumale/gooster/pkg/filesys/fstub"
 	_assert "github.com/stretchr/testify/assert"
-	"io"
-	"os"
+	"path"
 	"testing"
 )
 
 func TestHistory(t *testing.T) {
 	assert := _assert.New(t)
-
-	t.Run("Constructor", func(t *testing.T) {
-		t.Run("should create a new constructor", func(t *testing.T) {
-			mng := NewManager("/foo/bar")
-			assert.Equal("/foo/bar", mng.filePath)
-		})
-
-		t.Run("should format path with home dir", func(t *testing.T) {
-			home, _ := os.UserHomeDir()
-			mng := NewManager("~/foo/bar")
-			assert.Equal(home+"/foo/bar", mng.filePath)
-		})
-	})
-
-	var historyFile *stub.FileStub
-	historyPath := "/foo/bar"
-
-	create := func(lines ...string) *Manager {
-		m := NewManager(historyPath)
-		historyFile = stub.NewFileStub(lines)
-		m.openReadFile = func(path string) (closer io.ReadCloser, e error) {
-			assert.Equal(historyPath, path)
-			return historyFile, nil
-		}
-		m.openWriteFile = func(path string) (closer io.WriteCloser, e error) {
-			assert.Equal(historyPath, path)
-			return historyFile, nil
-		}
-		return m
+	fsProps := &fstub.Props{
+		WorkDir: "/wd",
+		HomeDir: "/hd",
+	}
+	newFs := func() *fstub.Stub {
+		return fstub.New(fsProps)
 	}
 
-	t.Run("Load", func(t *testing.T) {
-		t.Run("should load history lines and close file", func(t *testing.T) {
-			mng := create("foo", "bar", "baz")
-			assert.False(historyFile.Closed)
-			mng.Load()
+	t.Run("Constructor", func(t *testing.T) {
+		t.Run("should create a new clean manager", func(t *testing.T) {
+			mng := newManager(Config{}, newFs())
+			assert.Equal("", mng.filePath)
+			assert.Len(mng.stack, 0)
+			assert.Len(mng.set, 0)
+		})
 
-			assert.Equal([]string{"foo", "bar", "baz"}, mng.stack)
+		t.Run("should create a manager and load history file", func(t *testing.T) {
+			fs := newFs()
+			fs.Root().Add("foo/bar.txt", fstub.NewFile("foo", "bar"))
+
+			mng := newManager(Config{HistoryFile: "foo/bar.txt"}, fs)
+
+			assert.Equal([]string{"foo", "bar"}, mng.stack)
 			assert.Contains(mng.set, "foo")
 			assert.Contains(mng.set, "bar")
-			assert.Contains(mng.set, "baz")
-			assert.True(historyFile.Closed)
+			assert.True(fs.Get("foo/bar.txt").Closed)
+		})
+
+		t.Run("should load history file with ~", func(t *testing.T) {
+			homeFilePath := path.Join(fsProps.HomeDir, "foo/bar.txt")
+			fs := newFs()
+			fs.Root().Add(homeFilePath, fstub.NewFile("foo", "bar"))
+
+			mng := newManager(Config{HistoryFile: "~/foo/bar.txt"}, fs)
+
+			assert.Equal([]string{"foo", "bar"}, mng.stack)
+			assert.Contains(mng.set, "foo")
+			assert.Contains(mng.set, "bar")
+			assert.True(fs.Get(homeFilePath).Closed)
 		})
 	})
 
 	t.Run("Add", func(t *testing.T) {
+		file := "history.txt"
+
 		t.Run("should add new commands at the end of history", func(t *testing.T) {
-			mng := create("foo").Load()
+			fs := newFs()
+			fs.Root().Add(file, fstub.NewFile("foo"))
+			mng := newManager(Config{HistoryFile: file}, fs)
 
 			assert.Equal([]string{"foo"}, mng.stack)
 			assert.Contains(mng.set, "foo")
@@ -75,13 +75,23 @@ func TestHistory(t *testing.T) {
 		})
 
 		t.Run("should write new commands to the file", func(t *testing.T) {
-			mng := create()
-			mng.Add("foo")
-			assert.Equal([]string{"foo"}, historyFile.Writes())
+			fs := newFs()
+			fs.Root().Add(file, fstub.NewFile("foo"))
+
+			mng := newManager(Config{HistoryFile: file}, fs)
+			assert.Equal([]string{"foo"}, fs.Get(file).ContentLines())
+
 			mng.Add("bar")
-			assert.Equal([]string{"foo", "bar"}, historyFile.Writes())
+			assert.Equal([]string{"foo", "bar"}, fs.Get(file).ContentLines())
 		})
 	})
+
+	create := func(lines ...string) *Manager {
+		fs := newFs()
+		fs.Root().Add("history.txt", fstub.NewFile(lines...))
+
+		return newManager(Config{HistoryFile: "history.txt"}, fs)
+	}
 
 	t.Run("Next", func(t *testing.T) {
 		t.Run("should return empty val for empty history", func(t *testing.T) {
@@ -94,7 +104,7 @@ func TestHistory(t *testing.T) {
 		})
 
 		t.Run("should return next value after the index", func(t *testing.T) {
-			mng := create("foo", "bar", "baz").Load()
+			mng := create("foo", "bar", "baz")
 			mng.index = 1
 			assert.Equal("baz", mng.Next())
 			mng.index = 0
@@ -102,7 +112,7 @@ func TestHistory(t *testing.T) {
 		})
 
 		t.Run("should return empty value and reset index after reaching the end", func(t *testing.T) {
-			mng := create("foo", "bar", "baz").Load()
+			mng := create("foo", "bar", "baz")
 			mng.index = 1
 			assert.Equal("baz", mng.Next())
 			assert.Equal("", mng.Next())
@@ -117,18 +127,18 @@ func TestHistory(t *testing.T) {
 		})
 
 		t.Run("should return latest val for inactive history (index is not set)", func(t *testing.T) {
-			mng := create("foo", "bar", "baz").Load()
+			mng := create("foo", "bar", "baz")
 			assert.Equal("baz", mng.Prev())
 		})
 
 		t.Run("should return previous value before the index", func(t *testing.T) {
-			mng := create("foo", "bar", "baz").Load()
+			mng := create("foo", "bar", "baz")
 			mng.index = 1
 			assert.Equal("foo", mng.Prev())
 		})
 
 		t.Run("should jump to the end when there is not prev", func(t *testing.T) {
-			mng := create("foo", "bar", "baz").Load()
+			mng := create("foo", "bar", "baz")
 			mng.index = 0
 			assert.Equal("baz", mng.Prev())
 		})

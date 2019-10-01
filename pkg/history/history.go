@@ -2,63 +2,53 @@ package history
 
 import (
 	"bufio"
+	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
-	"io"
 	"os"
 	"strings"
 )
 
-type Manager struct {
-	set           map[string]struct{}
-	stack         []string
-	index         int
-	filePath      string
-	log           log.Logger
-	openReadFile  func(path string) (io.ReadCloser, error)
-	openWriteFile func(path string) (io.WriteCloser, error)
+type Config struct {
+	HistoryFile string
+	Log         log.Logger
 }
 
-func NewManager(historyFile string) *Manager {
+type Manager struct {
+	set      map[string]struct{}
+	stack    []string
+	index    int
+	filePath string
+	log      log.Logger
+	fs       filesys.FileSys
+}
+
+func NewManager(cfg Config) *Manager {
+	return newManager(cfg, filesys.Default{})
+}
+
+func newManager(cfg Config, fs filesys.FileSys) *Manager {
 	mng := &Manager{
 		index: -1,
 		set:   make(map[string]struct{}),
 		log:   log.EmptyLogger{},
-		openReadFile: func(path string) (io.ReadCloser, error) {
-			return os.Open(path)
-		},
-		openWriteFile: func(path string) (io.WriteCloser, error) {
-			return os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		},
+		fs:    fs,
+	}
+	if cfg.Log != nil {
+		mng.log = cfg.Log
 	}
 
-	if strings.HasPrefix(historyFile, "~") {
-		if dir, err := os.UserHomeDir(); err == nil {
-			historyFile = strings.Replace(historyFile, "~", dir, 1)
+	if strings.HasPrefix(cfg.HistoryFile, "~") {
+		if dir, err := mng.fs.UserHomeDir(); err == nil {
+			cfg.HistoryFile = strings.Replace(cfg.HistoryFile, "~", dir, 1)
 		}
 	}
-	mng.filePath = historyFile
+	mng.filePath = cfg.HistoryFile
+	if mng.filePath != "" {
+		mng.loadHistoryLines(mng.filePath)
+	}
 
 	return mng
-}
-
-func (h *Manager) Load() *Manager {
-	f, err := h.openReadFile(h.filePath)
-	if err != nil {
-		h.log.Error(errors.WithMessage(err, "loading bash history file"))
-	}
-	defer func() {
-		if err := f.Close(); err != nil {
-			h.log.Error(errors.WithMessage(err, "closing bash history file"))
-		}
-	}()
-
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		h.add(sc.Text())
-	}
-
-	return h
 }
 
 func (h *Manager) Add(cmd string) {
@@ -123,13 +113,27 @@ func (h *Manager) Next() string {
 	return h.stack[h.index]
 }
 
-func (h *Manager) SetLogger(log log.Logger) *Manager {
-	h.log = log
+func (h *Manager) loadHistoryLines(filePath string) *Manager {
+	f, err := h.fs.Open(filePath)
+	if err != nil {
+		h.log.Error(errors.WithMessage(err, "loading bash history file"))
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			h.log.Error(errors.WithMessage(err, "closing bash history file"))
+		}
+	}()
+
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		h.add(sc.Text())
+	}
+
 	return h
 }
 
 func (h *Manager) write(cmd string) {
-	f, err := h.openWriteFile(h.filePath)
+	f, err := h.fs.OpenFile(h.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		h.log.Error(errors.WithMessage(err, "opening hash history file"))
 	}
@@ -139,7 +143,7 @@ func (h *Manager) write(cmd string) {
 		}
 	}()
 
-	if _, err := f.Write([]byte(cmd + "\n")); err != nil {
+	if _, err := f.Write([]byte("\n" + cmd)); err != nil {
 		h.log.Error(errors.WithMessage(err, "writing to bash history file"))
 	}
 }
