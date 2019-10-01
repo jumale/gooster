@@ -34,8 +34,7 @@ type KeysConfig struct {
 
 func NewModule(cfg Config) *Module {
 	return &Module{
-		cfg:     cfg,
-		history: history.NewManager(cfg.HistoryFile),
+		cfg: cfg,
 	}
 }
 
@@ -53,7 +52,10 @@ func (m *Module) Name() string {
 
 func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	m.AppContext = ctx
-	m.history.SetLogger(m.Log()).Load()
+	m.history = history.NewManager(history.Config{
+		HistoryFile: m.cfg.HistoryFile,
+		Log:         ctx.Log(),
+	})
 
 	m.cmd = &CmdRunner{
 		ctx:    ctx,
