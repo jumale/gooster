@@ -69,10 +69,10 @@ func main() {
 			FocusKey: tcell.KeyCtrlW,
 		},
 		Colors: workdir.ColorsConfig{
-			Bg:     tcell.NewHexColor(0x405454),
-			Lines:  tcell.ColorLightSeaGreen,
-			Folder: tcell.ColorLightGreen,
-			File:   tcell.ColorLightSteelBlue,
+			Bg:       tcell.NewHexColor(0x405454),
+			Graphics: tcell.ColorLightSeaGreen,
+			Folder:   tcell.ColorLightGreen,
+			File:     tcell.ColorLightSteelBlue,
 		},
 		Keys: workdir.KeysConfig{
 			NewFile: tcell.KeyF2,
