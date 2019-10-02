@@ -57,7 +57,7 @@ func (s *Stub) path(pth string) string {
 
 func (s *Stub) Stat(name string) (os.FileInfo, error) {
 	if f, ok := s.files[s.path(name)]; ok {
-		return f, nil
+		return f.Info, nil
 	}
 	return nil, errors.Errorf("stat %s: no such file or directory", name)
 }
@@ -95,8 +95,8 @@ func (s *Stub) ReadDir(dirName string) ([]os.FileInfo, error) {
 
 	var result []os.FileInfo
 	for nodePath, node := range s.files {
-		if nodePath == path.Join(pth, node.Info.Name) {
-			result = append(result, node)
+		if nodePath == path.Join(pth, node.Info.Name()) {
+			result = append(result, node.Info)
 		}
 	}
 	sort.SliceStable(result, func(i, j int) bool {
@@ -203,8 +203,8 @@ type builder struct {
 }
 
 func (b *builder) Add(pth string, f *FileStub) *builder {
-	if f.IsDir() {
-		pth = b.mkPath(pth, f.Info.Mode)
+	if f.Info.IsDir() {
+		pth = b.mkPath(pth, f.Info.Mode())
 	} else {
 		pth = b.mkPath(pth, os.ModeDir)
 	}

@@ -18,7 +18,7 @@ type FileStub struct {
 	writeIdx callIndex
 	reader   io.Reader
 
-	Info InfoStub
+	Info FileInfo
 
 	ReadErr  ErrorMap
 	WriteErr ErrorMap
@@ -32,10 +32,10 @@ func NewFile(dataLines ...string) *FileStub {
 
 	return &FileStub{
 		content: []byte(content),
-		Info: InfoStub{
-			Size:    int64(len(content)),
-			ModTime: time.Now(),
-			IsDir:   false,
+		Info: FileInfo{
+			SIZE: int64(len(content)),
+			TIME: time.Now(),
+			DIR:  false,
 		},
 	}
 }
@@ -45,22 +45,22 @@ func NewDir() *FileStub {
 }
 
 func (f *FileStub) SetName(name string) *FileStub {
-	f.Info.Name = name
+	f.Info.NAME = name
 	return f
 }
 
 func (f *FileStub) SetMode(mode os.FileMode) *FileStub {
-	f.Info.Mode = mode
+	f.Info.MODE = mode
 	return f
 }
 
 func (f *FileStub) SetFlag(flag int) *FileStub {
-	f.Info.Flag = flag
+	f.Info.FLAG = flag
 	return f
 }
 
 func (f *FileStub) SetIsDir(isDir bool) *FileStub {
-	f.Info.IsDir = isDir
+	f.Info.DIR = isDir
 	return f
 }
 
@@ -95,7 +95,7 @@ func (f *FileStub) Write(p []byte) (n int, err error) {
 
 func (f *FileStub) Read(p []byte) (n int, err error) {
 	if f.reader == nil {
-		return 0, errors.New("You're using filesys.StubFile, and it seems you've forgot to call .Open() before calling .Read()")
+		return 0, errors.New("You're using filesys. StubFile, and it seems you've forgot to call .Open() before calling .Read()")
 	}
 
 	n, err = f.reader.Read(p)
@@ -116,35 +116,35 @@ func (f *FileStub) Close() error {
 
 // -------------------------------------------------- //
 
-type InfoStub struct {
-	Name    string
-	Size    int64
-	Mode    os.FileMode
-	Flag    int
-	ModTime time.Time
-	IsDir   bool
+type FileInfo struct {
+	NAME string
+	SIZE int64
+	MODE os.FileMode
+	TIME time.Time // modification time
+	DIR  bool
+	FLAG int
 }
 
-func (f FileStub) Name() string {
-	return f.Info.Name
+func (i FileInfo) Name() string {
+	return i.NAME
 }
 
-func (f FileStub) Size() int64 {
-	return f.Info.Size
+func (i FileInfo) Size() int64 {
+	return i.SIZE
 }
 
-func (f FileStub) Mode() os.FileMode {
-	return f.Info.Mode
+func (i FileInfo) Mode() os.FileMode {
+	return i.MODE
 }
 
-func (f FileStub) ModTime() time.Time {
-	return f.Info.ModTime
+func (i FileInfo) ModTime() time.Time {
+	return i.TIME
 }
 
-func (f FileStub) IsDir() bool {
-	return f.Info.IsDir
+func (i FileInfo) IsDir() bool {
+	return i.DIR
 }
 
-func (f FileStub) Sys() interface{} {
+func (i FileInfo) Sys() interface{} {
 	return nil
 }
