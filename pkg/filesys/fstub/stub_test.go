@@ -79,11 +79,11 @@ func TestBuilder(t *testing.T) {
 
 			assert.Len(files, 2)
 
-			assert.Equal("foo", files["/foo"].Info.Name)
-			assert.True(files["/foo"].Info.IsDir)
+			assert.Equal("foo", files["/foo"].Info.Name())
+			assert.True(files["/foo"].Info.IsDir())
 
-			assert.Equal("bar.txt", files["/foo/bar.txt"].Info.Name)
-			assert.False(files["/foo/bar.txt"].Info.IsDir)
+			assert.Equal("bar.txt", files["/foo/bar.txt"].Info.Name())
+			assert.False(files["/foo/bar.txt"].Info.IsDir())
 		})
 	})
 
@@ -100,17 +100,17 @@ func TestBuilder(t *testing.T) {
 
 			assert.Len(files, 4)
 
-			assert.Equal("foo", files["foo"].Info.Name)
-			assert.True(files["foo"].Info.IsDir)
+			assert.Equal("foo", files["foo"].Info.Name())
+			assert.True(files["foo"].Info.IsDir())
 
-			assert.Equal("bar", files["foo/bar"].Info.Name)
-			assert.True(files["foo/bar"].Info.IsDir)
+			assert.Equal("bar", files["foo/bar"].Info.Name())
+			assert.True(files["foo/bar"].Info.IsDir())
 
-			assert.Equal("baz", files["foo/bar/baz"].Info.Name)
-			assert.True(files["foo/bar/baz"].Info.IsDir)
+			assert.Equal("baz", files["foo/bar/baz"].Info.Name())
+			assert.True(files["foo/bar/baz"].Info.IsDir())
 
-			assert.Equal("new.txt", files["foo/bar/baz/new.txt"].Info.Name)
-			assert.False(files["foo/bar/baz/new.txt"].Info.IsDir)
+			assert.Equal("new.txt", files["foo/bar/baz/new.txt"].Info.Name())
+			assert.False(files["foo/bar/baz/new.txt"].Info.IsDir())
 		})
 
 		t.Run("should add dir with abs path", func(t *testing.T) {
@@ -122,8 +122,8 @@ func TestBuilder(t *testing.T) {
 
 			assert.Len(files, 1)
 
-			assert.Equal("foo", files["/foo"].Info.Name)
-			assert.True(files["/foo"].Info.IsDir)
+			assert.Equal("foo", files["/foo"].Info.Name())
+			assert.True(files["/foo"].Info.IsDir())
 		})
 
 		t.Run("should add dir with nested abs path", func(t *testing.T) {
@@ -135,8 +135,8 @@ func TestBuilder(t *testing.T) {
 
 			assert.Len(files, 2)
 
-			assert.Equal("foo", files["/foo"].Info.Name)
-			assert.True(files["/foo"].Info.IsDir)
+			assert.Equal("foo", files["/foo"].Info.Name())
+			assert.True(files["/foo"].Info.IsDir())
 		})
 	})
 }
@@ -192,8 +192,8 @@ func TestStub(t *testing.T) {
 
 			f, err := stub.Open("foo/bar.txt")
 			assert.NoError(err)
-			assert.Equal("bar.txt", f.(*FileStub).Info.Name)
-			assert.Equal(os.O_RDONLY, f.(*FileStub).Info.Flag)
+			assert.Equal("bar.txt", f.(*FileStub).Info.Name())
+			assert.Equal(os.O_RDONLY, f.(*FileStub).Info.FLAG)
 		})
 
 		t.Run("should return error if file does not exist", func(t *testing.T) {
@@ -213,9 +213,9 @@ func TestStub(t *testing.T) {
 			f, err := stub.Create("foo/bar.txt")
 			actual := f.(*FileStub)
 			assert.NoError(err)
-			assert.Equal("bar.txt", actual.Info.Name)
-			assert.Equal(os.O_RDWR|os.O_CREATE|os.O_TRUNC, actual.Info.Flag)
-			assert.Equal(os.FileMode(0), actual.Info.Mode)
+			assert.Equal("bar.txt", actual.Info.Name())
+			assert.Equal(os.O_RDWR|os.O_CREATE|os.O_TRUNC, actual.Info.FLAG)
+			assert.Equal(os.FileMode(0), actual.Info.Mode())
 			assert.Equal("lorem ipsum", actual.ContentString())
 		})
 
@@ -225,9 +225,9 @@ func TestStub(t *testing.T) {
 			f, err := stub.Create("foo/bar.txt")
 			actual := f.(*FileStub)
 			assert.NoError(err)
-			assert.Equal("bar.txt", actual.Info.Name)
-			assert.Equal(os.O_RDWR|os.O_CREATE|os.O_TRUNC, actual.Info.Flag)
-			assert.Equal(os.FileMode(0666), actual.Info.Mode)
+			assert.Equal("bar.txt", actual.Info.Name())
+			assert.Equal(os.O_RDWR|os.O_CREATE|os.O_TRUNC, actual.Info.FLAG)
+			assert.Equal(os.FileMode(0666), actual.Info.Mode())
 			assert.Empty(actual.Content())
 		})
 	})
@@ -241,12 +241,12 @@ func assertFiles(t *testing.T, actual map[filePath]*FileStub, expected expectedF
 		info := actual[pth].Info
 		switch v := item.(type) {
 		case file:
-			assert.Equal(v.name, info.Name)
-			assert.False(info.IsDir)
+			assert.Equal(v.name, info.Name())
+			assert.False(info.IsDir())
 
 		case dir:
-			assert.Equal(v.name, info.Name)
-			assert.True(info.IsDir)
+			assert.Equal(v.name, info.Name())
+			assert.True(info.IsDir())
 
 		default:
 			assert.Fail("non supported file expectation")
