@@ -34,6 +34,7 @@ type Module struct {
 	view    *tview.TreeView
 	tree    *dirtree.DirTree
 	fs      filesys.FileSys
+	ext     []Extension
 }
 
 func (m *Module) Name() string {
@@ -42,6 +43,10 @@ func (m *Module) Name() string {
 
 func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleConfig, error) {
 	m.AppContext = ctx
+
+	m.AddExtension(SortExtension{Mode: SortByType})
+
+	m.tree.OnRefresh(m.getTreeExtensionHooks())
 
 	m.Actions().OnWorkDirChange(func(newPath string) {
 		m.workDir = newPath
