@@ -2,6 +2,7 @@ package workdir
 
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
+	"github.com/jumale/gooster/pkg/gooster"
 	"path"
 	"sort"
 	"strings"
@@ -18,9 +19,19 @@ const (
 	SortDesc
 )
 
-func (s SortExtension) Sort(nodes []*dirtree.Node) []*dirtree.Node {
-	byType := s.Mode&SortByType != 0
-	ASC := s.Mode&SortDesc == 0
+func (ext SortExtension) OnRefresh(ExtendableTree) dirtree.NodesHook {
+	return func(config dirtree.Config, nodes []*dirtree.Node) []*dirtree.Node {
+		return ext.sort(nodes)
+	}
+}
+
+func (ext SortExtension) OnInput(ExtendableTree) gooster.InputHandler {
+	return nil
+}
+
+func (ext SortExtension) sort(nodes []*dirtree.Node) []*dirtree.Node {
+	byType := ext.Mode&SortByType != 0
+	ASC := ext.Mode&SortDesc == 0
 
 	sort.SliceStable(nodes, func(i, j int) bool {
 		a := nodes[i].Info
@@ -47,10 +58,4 @@ func (s SortExtension) Sort(nodes []*dirtree.Node) []*dirtree.Node {
 		return aName < bName == ASC
 	})
 	return nodes
-}
-
-func (s SortExtension) OnRefresh() dirtree.NodesHook {
-	return func(config dirtree.Config, nodes []*dirtree.Node) []*dirtree.Node {
-		return s.Sort(nodes)
-	}
 }

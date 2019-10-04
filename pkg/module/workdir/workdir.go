@@ -9,6 +9,7 @@ import (
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/rivo/tview"
 	"strings"
+	"time"
 )
 
 func NewModule(cfg Config) *Module {
@@ -45,8 +46,12 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	m.AppContext = ctx
 
 	m.AddExtension(SortExtension{Mode: SortByType})
+	m.AddExtension(NewFocusNodeExtension(FocusNodeExtensionConfig{
+		KeyPressInterval: 700 * time.Millisecond,
+		Log:              m.Log(),
+	}))
 
-	m.tree.OnRefresh(m.getTreeExtensionHooks())
+	m.tree.OnRefresh(m.extendTreeNodes())
 
 	m.Actions().OnWorkDirChange(func(newPath string) {
 		m.workDir = newPath
@@ -70,6 +75,10 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	m.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
 
 	m.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if newEvent, handled := m.extendTreeKeys()(event); handled {
+			return newEvent
+		}
+
 		switch event.Key() {
 
 		case m.cfg.Keys.Enter:
@@ -104,6 +113,9 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 				},
 				Log: ctx.Log(),
 			})
+
+		case tcell.KeyRune:
+			m.Log().DebugF("Workdir keypress %s", event.Rune())
 		}
 		return event
 	})

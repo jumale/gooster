@@ -52,7 +52,7 @@ func TestSortExtension(t *testing.T) {
 				"aaa.txt",
 				"ccc.txt",
 			},
-			Actual(SortExtension{SortByType}.Sort(Input{
+			Actual(SortExtension{SortByType}.sort(Input{
 				file("ccc.txt"),
 				dir("bbb"),
 				file("aaa.txt"),
@@ -143,7 +143,7 @@ func file(name string) *dirtree.Node {
 
 func sortByExtension(mode SortMode, nodes []*dirtree.Node) []string {
 	input := append(nodes[:0:0], nodes...)
-	return Actual(SortExtension{mode}.Sort(input))
+	return Actual(SortExtension{mode}.sort(input))
 }
 
 func Actual(nodes []*dirtree.Node) (names []string) {

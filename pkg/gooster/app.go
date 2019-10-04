@@ -129,7 +129,7 @@ func (app *App) Run() {
 	})
 
 	app.ctx.actions.OnSetFocus(func(view tview.Primitive) {
-		app.ctx.log.Debug("App: focusing view")
+		app.ctx.log.DebugF("App: focusing view: %T", view)
 		app.root.SetFocus(view)
 	})
 
@@ -174,10 +174,7 @@ func (app *App) newTab() {
 	app.pages.AddPage(pageId, grid, true, true)
 }
 
-func (app *App) createInputHandler(
-	handlers ...func(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool),
-) func(event *tcell.EventKey) *tcell.EventKey {
-
+func (app *App) createInputHandler(handlers ...InputHandler) InputCapture {
 	return func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() != tcell.KeyRune {
 			app.ctx.log.DebugF("App: pressed key %s", tcell.KeyNames[event.Key()])
@@ -215,7 +212,7 @@ func (app *App) handleCloseDialog(event *tcell.EventKey) (newEvent *tcell.EventK
 
 func (app *App) handleFocusKeys(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
 	if view, ok := app.focusMap[event.Key()]; ok {
-		app.ctx.log.Debug("App: focusing view")
+		app.ctx.log.DebugF("App: focusing view by key %s", tcell.KeyNames[event.Key()])
 		app.ctx.actions.SetFocus(view)
 		app.lastFocus = view
 		return event, true
