@@ -18,8 +18,9 @@ func NewModule(cfg Config) *Module {
 
 func newModule(cfg Config, fs filesys.FileSys) *Module {
 	return &Module{
-		cfg: cfg,
-		fs:  fs,
+		cfg:    cfg,
+		fs:     fs,
+		change: func(string) {},
 		tree: dirtree.New(dirtree.Config{Colors: dirtree.ColorsConfig{
 			Root:   cfg.Colors.Graphics,
 			Folder: cfg.Colors.Folder,
@@ -36,6 +37,7 @@ type Module struct {
 	tree    *dirtree.DirTree
 	fs      filesys.FileSys
 	ext     []Extension
+	change  func(string)
 }
 
 func (m *Module) Name() string {
@@ -52,11 +54,6 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	}))
 
 	m.tree.OnRefresh(m.extendTreeNodes())
-
-	m.Actions().OnWorkDirChange(func(newPath string) {
-		m.workDir = newPath
-		m.refreshTree()
-	})
 
 	m.view = tview.NewTreeView()
 	m.view.SetRoot(m.tree.Root().TreeNode)
@@ -121,6 +118,18 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	})
 
 	return m.view, m.cfg.ModuleConfig, nil
+}
+
+func (m *Module) OnWorkDirSet(path string) {
+	m.change(path)
+}
+
+func (m *Module) WorkDirChangeCallback(callback func(string)) {
+	m.change = func(path string) {
+		m.workDir = path
+		m.refreshTree()
+		callback(path)
+	}
 }
 
 func (m *Module) formatPath(path string, limit int) string {

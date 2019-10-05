@@ -5,6 +5,7 @@ import (
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/gooster/module/help"
+	"github.com/jumale/gooster/pkg/gooster/module/helper"
 	"github.com/jumale/gooster/pkg/gooster/module/output"
 	"github.com/jumale/gooster/pkg/gooster/module/prompt"
 	"github.com/jumale/gooster/pkg/gooster/module/status"
@@ -36,6 +37,9 @@ func main() {
 		Grid:     grid,
 		//EventsLogPath: "/tmp/gooster-events.log",
 		Debug: args.Debug,
+		Keys: gooster.KeysConfig{
+			Exit: tcell.KeyF12,
+		},
 		Dialog: dialog.Config{
 			Colors: dialog.ColorsConfig{
 				Bg:       tcell.ColorCornflowerBlue,
@@ -138,6 +142,20 @@ func main() {
 			WorkDir:    tcell.ColorGold,
 			Branch:     tcell.ColorLimeGreen,
 			K8sContext: tcell.ColorSkyblue,
+		},
+	}))
+
+	shell.RegisterModule(helper.NewModule(helper.Config{
+		ModuleConfig: gooster.ModuleConfig{
+			Position: gooster.Position{
+				Col: 1, Row: 3,
+				Width: 1, Height: 1,
+			},
+			Enabled: !args.ShowHelp,
+			Focused: false,
+		},
+		Colors: helper.ColorsConfig{
+			Bg: tcell.NewHexColor(0x333333),
 		},
 	}))
 

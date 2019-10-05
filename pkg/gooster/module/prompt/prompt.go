@@ -34,15 +34,19 @@ type KeysConfig struct {
 
 func NewModule(cfg Config) *Module {
 	return &Module{
-		cfg: cfg,
+		cfg:       cfg,
+		interrupt: func() {},
+		setPrompt: func(string) {},
 	}
 }
 
 type Module struct {
-	cfg     Config
-	view    *tview.InputField
-	cmd     *CmdRunner
-	history *history.Manager
+	cfg       Config
+	view      *tview.InputField
+	cmd       *CmdRunner
+	history   *history.Manager
+	interrupt func()
+	setPrompt func(input string)
 	*gooster.AppContext
 }
 
@@ -72,15 +76,6 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	m.view.SetFieldBackgroundColor(m.cfg.Colors.Bg)
 	m.view.SetFieldTextColor(m.cfg.Colors.Text)
 
-	m.Actions().OnSetPrompt(func(input string) {
-		m.view.SetText(input)
-	})
-
-	m.Actions().OnCommandInterrupt(func() {
-		m.view.SetText("")
-		m.history.Reset()
-	})
-
 	m.view.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case m.cfg.Keys.HistoryNext:
@@ -100,6 +95,29 @@ func (m *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	m.view.SetDoneFunc(m.processKeyPress)
 
 	return m.view, m.cfg.ModuleConfig, nil
+}
+
+func (m *Module) OnCommandInterrupt() {
+	m.interrupt()
+}
+
+func (m *Module) CommandInterruptCallback(callback func()) {
+	m.interrupt = func() {
+		m.setPrompt("")
+		m.history.Reset()
+		callback()
+	}
+}
+
+func (m *Module) OnPromptSet(prompt string) {
+	m.setPrompt(prompt)
+}
+
+func (m *Module) PromptChangeCallback(callback func(string)) {
+	m.setPrompt = func(input string) {
+		m.view.SetText(input)
+		callback(input)
+	}
 }
 
 func (m *Module) processKeyPress(key tcell.Key) {

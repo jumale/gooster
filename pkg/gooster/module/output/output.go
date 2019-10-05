@@ -18,12 +18,16 @@ type ColorsConfig struct {
 }
 
 func NewModule(cfg Config) *Module {
-	return &Module{cfg: cfg}
+	return &Module{
+		cfg:   cfg,
+		write: func([]byte) {},
+	}
 }
 
 type Module struct {
-	cfg  Config
-	view *tview.TextView
+	cfg   Config
+	view  *tview.TextView
+	write func([]byte)
 	*gooster.AppContext
 }
 
@@ -43,11 +47,18 @@ func (w *Module) Init(ctx *gooster.AppContext) (tview.Primitive, gooster.ModuleC
 	w.view.SetBackgroundColor(w.cfg.Colors.Bg)
 	w.view.SetTextColor(w.cfg.Colors.Text)
 
-	w.Actions().OnOutput(func(data []byte) {
-		if _, err := w.view.Write(data); err != nil {
+	return w.view, w.cfg.ModuleConfig, nil
+}
+
+func (w *Module) OnOutputWrite(content []byte) {
+	w.write(content)
+}
+
+func (w *Module) OutputWriteCallback(callback func(interface{})) {
+	w.write = func(bytes []byte) {
+		if _, err := w.view.Write(bytes); err != nil {
 			w.Log().Error(errors.WithMessage(err, "write to output"))
 		}
-	})
-
-	return w.view, w.cfg.ModuleConfig, nil
+		callback(bytes)
+	}
 }

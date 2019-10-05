@@ -24,7 +24,7 @@ func newModalManger(cfg dialog.Config, ctx *AppContext, pages *tview.Pages) *mod
 		pageId: "gooster_dialog_box",
 	}
 
-	ctx.actions.Subscribe(ctx.actions.withSeed(eventOpenDialog), events.Subscriber{
+	ctx.actions.Subscribe(ctx.actions.withSeed(actionAppOpenDialog), events.Subscriber{
 		Handler: func(event events.Event) {
 			dg := event.Data.(dialog.Dialog)
 			view := dg.View(mng.cfg, func(form *tview.Form) {
@@ -43,7 +43,7 @@ func newModalManger(cfg dialog.Config, ctx *AppContext, pages *tview.Pages) *mod
 		},
 	})
 
-	ctx.actions.Subscribe(ctx.actions.withSeed(eventCloseDialog), events.Subscriber{
+	ctx.actions.Subscribe(ctx.actions.withSeed(actionAppCloseDialog), events.Subscriber{
 		Handler: func(event events.Event) {
 			mng.pages.RemovePage(mng.pageId)
 			mng.isOpen = false

@@ -60,7 +60,7 @@ func (c *CmdRunner) run(input string, ctx context.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	cmd := exec.CommandContext(ctx, "bash", "-c", input)
+	cmd := exec.CommandContext(ctx, "bash", "-l", "-c", input)
 	cmd.Stderr = c.Stderr
 	cmd.Stdout = c.Stdout
 	c.ctx.Log().DebugF("Starting command `%s`", input)

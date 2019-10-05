@@ -13,6 +13,7 @@ import (
 
 type AppConfig struct {
 	Grid          GridConfig
+	Keys          KeysConfig
 	InitDir       string
 	LogLevel      log.Level
 	EventsLogPath string
@@ -23,6 +24,10 @@ type AppConfig struct {
 type GridConfig struct {
 	Cols []int
 	Rows []int
+}
+
+type KeysConfig struct {
+	Exit tcell.Key
 }
 
 func NewApp(cfg AppConfig) (*App, error) {
@@ -107,12 +112,13 @@ func (app *App) RegisterModule(mod Module) {
 
 func (app *App) Run() {
 	app.ctx.log.Info("Starting App")
+	app.ctx.actions.registerActionOwners(app.modules)
 	app.root.SetInputCapture(app.createInputHandler(
 		app.handleFocusKeys,
 		app.handleInterrupt,
 		app.handleCloseDialog,
+		app.handleExit,
 	))
-	tview.NewModal()
 
 	defer func() {
 		if err := app.Close(); err != nil {
@@ -218,5 +224,13 @@ func (app *App) handleFocusKeys(event *tcell.EventKey) (newEvent *tcell.EventKey
 		return event, true
 	}
 
+	return event, false
+}
+
+func (app *App) handleExit(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
+	if event.Key() == app.cfg.Keys.Exit {
+		app.ctx.actions.Exit()
+		return event, true
+	}
 	return event, false
 }
