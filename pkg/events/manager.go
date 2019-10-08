@@ -37,6 +37,13 @@ type DefaultManager struct {
 }
 
 func NewManager(cfg ManagerConfig) (*DefaultManager, error) {
+	if cfg.BeforeEvent == nil {
+		cfg.BeforeEvent = func(Event) bool { return true }
+	}
+	if cfg.AfterEvent == nil {
+		cfg.AfterEvent = func(Event) {}
+	}
+
 	em := &DefaultManager{
 		cfg:     cfg,
 		sub:     make(map[EventId][]Subscriber),
