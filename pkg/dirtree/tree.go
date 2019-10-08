@@ -11,12 +11,6 @@ import (
 
 const rootNodeName = "../"
 
-// NodesHook is a function which provides possibility
-// to modify the list of tree nodes before they actually
-// get displayed. It accepts the tree config and the
-// list of nodes and should return an updated list of nodes.
-type NodesHook func(Config, []*Node) []*Node
-
 type FindMode int
 
 const (
@@ -26,7 +20,8 @@ const (
 )
 
 type Config struct {
-	Colors ColorsConfig
+	Colors      ColorsConfig
+	SetChildren func(target *tview.TreeNode, children []*Node)
 }
 
 type ColorsConfig struct {
@@ -36,11 +31,10 @@ type ColorsConfig struct {
 }
 
 type DirTree struct {
-	cfg   Config
-	apply NodesHook
-	root  *Node
-	path  string
-	fs    filesys.FileSys
+	cfg  Config
+	root *Node
+	path string
+	fs   filesys.FileSys
 }
 
 func New(cfg Config) *DirTree {
@@ -53,13 +47,14 @@ func newTree(fs filesys.FileSys, cfg Config) *DirTree {
 	ref := &Node{TreeNode: root}
 	root.SetReference(ref)
 
+	if cfg.SetChildren == nil {
+		cfg.SetChildren = defaultChildrenSetter
+	}
+
 	return &DirTree{
 		cfg:  cfg,
 		root: ref,
 		fs:   fs,
-		apply: func(config Config, nodes []*Node) []*Node {
-			return nodes
-		},
 	}
 }
 
@@ -89,11 +84,6 @@ func (t *DirTree) ExpandNode(node *tview.TreeNode) {
 		// Collapse if visible, expand if collapsed.
 		node.SetExpanded(!node.IsExpanded())
 	}
-}
-
-func (t *DirTree) OnRefresh(fn NodesHook) *DirTree {
-	t.apply = fn
-	return t
 }
 
 func (t DirTree) Path() string {
@@ -170,11 +160,7 @@ func (t *DirTree) buildChildren(target *tview.TreeNode, targetPath string) {
 		refs = append(refs, ref)
 	}
 
-	var children []*tview.TreeNode
-	for _, ref := range t.apply(t.cfg, refs) {
-		children = append(children, ref.TreeNode)
-	}
-	target.SetChildren(children)
+	t.cfg.SetChildren(target, refs)
 }
 
 func (t *DirTree) nodeColor(n *Node) tcell.Color {
@@ -193,5 +179,12 @@ func (t *DirTree) shiftIndex(idx int, mode FindMode) (newIdx int) {
 		return idx + 1
 	default:
 		return idx
+	}
+}
+
+func defaultChildrenSetter(target *tview.TreeNode, children []*Node) {
+	target.SetChildren(nil)
+	for _, child := range children {
+		target.AddChild(child.TreeNode)
 	}
 }
