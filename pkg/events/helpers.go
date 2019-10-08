@@ -17,14 +17,14 @@ func truncateString(str string, num int) string {
 	return result
 }
 
-func getSubscriberIdFromCaller(skip int) subscriberId {
+func getCallerId(skip int) string {
 	_, file, line, ok := runtime.Caller(skip)
 	if !ok {
 		return "unknown"
 	}
 
 	parts := strings.Split(file, "/")
-	return subscriberId(fmt.Sprintf("%s:%d", parts[len(parts)-1], line))
+	return fmt.Sprintf("%s:%d", parts[len(parts)-1], line)
 }
 
 func toString(data interface{}) string {
