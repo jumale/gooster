@@ -21,12 +21,12 @@ type Handler func(Event)
 
 type Subscriber struct {
 	Handle   Handler
-	Priority float64
+	Priority float64 // higher value == earlier called
 }
 
 type Extender func(data EventPayload) (newData EventPayload)
 
 type Extension struct {
 	Extend   Extender
-	Priority float64
+	Priority float64 // higher value == earlier called
 }
