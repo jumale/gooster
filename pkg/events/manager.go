@@ -1,7 +1,6 @@
 package events
 
 import (
-	"github.com/jumale/gooster/pkg/log"
 	"sort"
 	"sync"
 )
@@ -18,15 +17,12 @@ type ManagerConfig struct {
 
 	// AfterEvent is applied on every event after it's dispatched.
 	AfterEvent func(Event)
-
-	Log log.Logger
 }
 
 type DefaultManager struct {
 	cfg ManagerConfig
 	sub map[EventId][]Subscriber
 	ext map[EventId][]Extension
-	log log.Logger
 	mu  *sync.Mutex
 
 	filter func(Event) bool
@@ -50,13 +46,8 @@ func NewManager(cfg ManagerConfig) (*DefaultManager, error) {
 		ext:     make(map[EventId][]Extension),
 		mu:      &sync.Mutex{},
 		filter:  func(Event) bool { return true },
-		log:     log.EmptyLogger{},
 		started: !cfg.DelayedStart,
 	}
-	if cfg.Log != nil {
-		em.log = cfg.Log
-	}
-	em.log.Info("Event Manager: initialized")
 
 	return em, nil
 }
@@ -74,10 +65,7 @@ func (em *DefaultManager) Dispatch(e Event) {
 		return
 	}
 
-	em.log.DebugF("Event Manager: dispatched %s %s", e.Id, e.formattedData())
 	e = em.extendEvent(e)
-	em.log.DebugF("Event Manager: modified %s to %s", e.Id, e.formattedData())
-
 	if subscribers, ok := em.sub[e.Id]; ok {
 		for _, sub := range subscribers {
 			sub.Handle(e)
@@ -120,11 +108,9 @@ func (em *DefaultManager) Start() {
 	for _, event := range em.buffer {
 		em.Dispatch(event)
 	}
-	em.log.Info("Event Manager: started")
 }
 
 func (em *DefaultManager) Close() error {
-	em.log.Info("Event Manager: closed")
 	return nil
 }
 
