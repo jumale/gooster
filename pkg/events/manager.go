@@ -7,8 +7,16 @@ import (
 )
 
 type ManagerConfig struct {
+	// DelayedStart defines whether events will be dispatched immediately,
+	// of buffered till Manager.Start() is called.
+	// It allows to delay starting the event manager without loosing any events.
 	DelayedStart bool
-	Log          log.Logger
+
+	// Filter is applied to every event,
+	// and if returns false then the event will not be dispatched.
+	Filter func(Event) bool
+
+	Log log.Logger
 }
 
 type DefaultManager struct {
@@ -17,6 +25,8 @@ type DefaultManager struct {
 	ext map[EventId][]Extension
 	log log.Logger
 	mu  *sync.Mutex
+
+	filter func(Event) bool
 
 	// support for delayed start
 	buffer  []Event
@@ -29,6 +39,7 @@ func NewManager(cfg ManagerConfig) (*DefaultManager, error) {
 		sub:     make(map[EventId][]Subscriber),
 		ext:     make(map[EventId][]Extension),
 		mu:      &sync.Mutex{},
+		filter:  func(Event) bool { return true },
 		log:     log.EmptyLogger{},
 		started: !cfg.DelayedStart,
 	}
@@ -41,6 +52,10 @@ func NewManager(cfg ManagerConfig) (*DefaultManager, error) {
 }
 
 func (em *DefaultManager) Dispatch(e Event) {
+	if !em.cfg.Filter(e) {
+		return
+	}
+
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
