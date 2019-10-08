@@ -12,9 +12,12 @@ type ManagerConfig struct {
 	// It allows to delay starting the event manager without loosing any events.
 	DelayedStart bool
 
-	// Filter is applied to every event,
+	// BeforeEvent is applied on every event, before it's dispatched,
 	// and if returns false then the event will not be dispatched.
-	Filter func(Event) bool
+	BeforeEvent func(Event) bool
+
+	// AfterEvent is applied on every event after it's dispatched.
+	AfterEvent func(Event)
 
 	Log log.Logger
 }
@@ -52,7 +55,7 @@ func NewManager(cfg ManagerConfig) (*DefaultManager, error) {
 }
 
 func (em *DefaultManager) Dispatch(e Event) {
-	if !em.cfg.Filter(e) {
+	if !em.cfg.BeforeEvent(e) {
 		return
 	}
 
@@ -73,6 +76,8 @@ func (em *DefaultManager) Dispatch(e Event) {
 			sub.Handle(e)
 		}
 	}
+
+	em.cfg.AfterEvent(e)
 }
 
 func (em *DefaultManager) Subscribe(id EventId, es Subscriber) {
