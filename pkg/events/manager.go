@@ -57,50 +57,68 @@ func (em *DefaultManager) Dispatch(e Event) {
 		return
 	}
 
-	em.mu.Lock()
-	defer em.mu.Unlock()
-
 	if !em.started {
+		em.mu.Lock()
 		em.buffer = append(em.buffer, e)
+		em.mu.Unlock()
+		return
+	}
+
+	em.mu.Lock()
+	subscribers, ok := em.sub[e.Id]
+	em.mu.Unlock()
+	if !ok {
 		return
 	}
 
 	e = em.extendEvent(e)
-	if subscribers, ok := em.sub[e.Id]; ok {
-		for _, sub := range subscribers {
-			sub.Handle(e)
-		}
+	for _, sub := range subscribers {
+		sub.Fn(e)
 	}
 
 	em.cfg.AfterEvent(e)
 }
 
-func (em *DefaultManager) Subscribe(id EventId, es Subscriber) {
+func (em *DefaultManager) Subscribe(subscribers ...Subscriber) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	if _, ok := em.sub[id]; !ok {
-		em.sub[id] = []Subscriber{}
+	var changedEvents []EventId
+	for _, es := range subscribers {
+		id := es.Id
+		changedEvents = append(changedEvents, id)
+		if _, ok := em.sub[id]; !ok {
+			em.sub[id] = []Subscriber{}
+		}
+		em.sub[id] = append(em.sub[id], es)
 	}
-	em.sub[id] = append(em.sub[id], es)
 
-	sort.SliceStable(em.sub[id], func(i, j int) bool {
-		return em.sub[id][i].Priority > em.sub[id][j].Priority
-	})
+	for _, id := range changedEvents {
+		sort.SliceStable(em.sub[id], func(i, j int) bool {
+			return em.sub[id][i].Order > em.sub[id][j].Order
+		})
+	}
 }
 
-func (em *DefaultManager) Extend(id EventId, ext Extension) {
+func (em *DefaultManager) Extend(extensions ...Extension) {
 	em.mu.Lock()
 	defer em.mu.Unlock()
 
-	if _, ok := em.ext[id]; !ok {
-		em.ext[id] = []Extension{}
+	var changedEvents []EventId
+	for _, ext := range extensions {
+		id := ext.Id
+		changedEvents = append(changedEvents, id)
+		if _, ok := em.ext[id]; !ok {
+			em.ext[id] = []Extension{}
+		}
+		em.ext[id] = append(em.ext[id], ext)
 	}
-	em.ext[id] = append(em.ext[id], ext)
 
-	sort.SliceStable(em.ext[id], func(i, j int) bool {
-		return em.ext[id][i].Priority > em.ext[id][j].Priority
-	})
+	for _, id := range changedEvents {
+		sort.SliceStable(em.ext[id], func(i, j int) bool {
+			return em.ext[id][i].Order > em.ext[id][j].Order
+		})
+	}
 }
 
 func (em *DefaultManager) Start() {
@@ -115,14 +133,14 @@ func (em *DefaultManager) Close() error {
 }
 
 func (em *DefaultManager) extendEvent(originalEvent Event) (extendedEvent Event) {
-	data := originalEvent.Data
+	data := originalEvent.Payload
 	if extensions, ok := em.ext[originalEvent.Id]; ok {
 		for _, extension := range extensions {
-			data = extension.Extend(data)
+			data = extension.Fn(data)
 		}
 	}
 	return Event{
-		Id:   originalEvent.Id,
-		Data: data,
+		Id:      originalEvent.Id,
+		Payload: data,
 	}
 }

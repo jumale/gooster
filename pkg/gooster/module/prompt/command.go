@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"context"
+	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
 	"io"
 	"os"
@@ -19,7 +20,7 @@ type Command struct {
 type CmdRunner struct {
 	Stdout io.Writer
 	Stderr io.Writer
-	ctx    *gooster.AppContext
+	*gooster.AppContext
 }
 
 func (c *CmdRunner) Run(cmd Command) error {
@@ -27,7 +28,7 @@ func (c *CmdRunner) Run(cmd Command) error {
 		go func() {
 			err := c.run(cmd.Cmd, cmd.Ctx)
 			if err != nil {
-				c.ctx.Log().Error(err)
+				c.Log().Error(err)
 			}
 		}()
 		return nil
@@ -38,21 +39,21 @@ func (c *CmdRunner) Run(cmd Command) error {
 }
 
 func (c *CmdRunner) run(input string, ctx context.Context) error {
-	c.ctx.Log().DebugF("Executing command `%s`", input)
+	c.Log().DebugF("Executing command `%s`", input)
 
 	// If it's exit command
 	if input == "exit" {
 		go func() {
-			c.ctx.Log().Debug("Executing exit command")
-			c.ctx.Actions().Exit()
+			c.Log().Debug("Executing exit command")
+			c.AppActions().Exit()
 		}()
 		return nil
 	}
 
 	// If it looks like "cd" command:
 	if path := detectWorkDirPath(input); path != "" {
-		c.ctx.Log().DebugF("Detected cd path '%s' from command '%s'", path, input)
-		c.ctx.Actions().SetWorkDir(path)
+		c.Log().DebugF("Detected cd path '%s' from command '%s'", path, input)
+		c.Events().Dispatch(events.Event{Id: "workdir:change_dir", Payload: path}) // @todo use Actions
 		return nil
 	}
 
@@ -63,7 +64,7 @@ func (c *CmdRunner) run(input string, ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "bash", "-l", "-c", input)
 	cmd.Stderr = c.Stderr
 	cmd.Stdout = c.Stdout
-	c.ctx.Log().DebugF("Starting command `%s`", input)
+	c.Log().DebugF("Starting command `%s`", input)
 	err := cmd.Run()
 	// Most commands would return errors like "exit status 1" (e.g. `echo "foo" | grep bar`).
 	// We're not interested in those errors and don't want to flood our log with them,

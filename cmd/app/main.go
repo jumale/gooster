@@ -4,7 +4,7 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
-	"github.com/jumale/gooster/pkg/gooster/module/help"
+	"github.com/jumale/gooster/pkg/gooster/extension"
 	"github.com/jumale/gooster/pkg/gooster/module/helper"
 	"github.com/jumale/gooster/pkg/gooster/module/output"
 	"github.com/jumale/gooster/pkg/gooster/module/prompt"
@@ -13,6 +13,7 @@ import (
 	"github.com/jumale/gooster/pkg/log"
 	"os"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -32,7 +33,6 @@ func main() {
 	}
 
 	shell, err := gooster.NewApp(gooster.AppConfig{
-		//InitDir:  "/Users/yurii.maltsev/Dev/src",
 		LogLevel: args.LogLevel,
 		Grid:     grid,
 		//EventsLogPath: "/tmp/gooster-events.log",
@@ -51,24 +51,14 @@ func main() {
 		panic(err)
 	}
 
-	shell.RegisterModule(help.NewModule(help.Config{
-		ModuleConfig: gooster.ModuleConfig{
-			Position: gooster.Position{
-				Col: 0, Row: 0,
-				Width: len(grid.Cols), Height: len(grid.Rows),
-			},
-			Enabled: args.ShowHelp,
-			Focused: false,
-		},
-	}))
-
 	shell.RegisterModule(workdir.NewModule(workdir.Config{
+		//InitDir:  "/Users/yurii.maltsev/Dev/src",
 		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 0, Row: 1,
 				Width: 1, Height: 3,
 			},
-			Enabled:  !args.ShowHelp,
+			Enabled:  true,
 			Focused:  false,
 			FocusKey: tcell.KeyCtrlW,
 		},
@@ -83,8 +73,18 @@ func main() {
 			View:    tcell.KeyF3,
 			NewDir:  tcell.KeyF7,
 			Delete:  tcell.KeyF8,
-			Enter:   tcell.KeyEnter,
+			Open:    tcell.KeyEnter,
 		},
+	}), extension.NewWorkDirSort(extension.WorkDirSortConfig{
+		ExtensionConfig: gooster.ExtensionConfig{
+			Enabled: true,
+		},
+		Mode: extension.SortByType,
+	}), extension.NewWorkDirNavigate(extension.WorkDirNavigateConfig{
+		ExtensionConfig: gooster.ExtensionConfig{
+			Enabled: true,
+		},
+		KeyPressInterval: 400 * time.Millisecond,
 	}))
 
 	shell.RegisterModule(output.NewModule(output.Config{
@@ -93,7 +93,7 @@ func main() {
 				Col: 1, Row: 1,
 				Width: 1, Height: 1,
 			},
-			Enabled: !args.ShowHelp,
+			Enabled: true,
 			Focused: false,
 		},
 		Colors: output.ColorsConfig{
@@ -108,7 +108,7 @@ func main() {
 				Col: 1, Row: 2,
 				Width: 1, Height: 1,
 			},
-			Enabled:  !args.ShowHelp,
+			Enabled:  true,
 			Focused:  true,
 			FocusKey: tcell.KeyCtrlF,
 		},
@@ -134,7 +134,7 @@ func main() {
 				Col: 0, Row: 0,
 				Width: 2, Height: 1,
 			},
-			Enabled: !args.ShowHelp,
+			Enabled: true,
 			Focused: false,
 		},
 		Colors: status.ColorsConfig{
@@ -151,7 +151,7 @@ func main() {
 				Col: 1, Row: 3,
 				Width: 1, Height: 1,
 			},
-			Enabled: !args.ShowHelp,
+			Enabled: true,
 			Focused: false,
 		},
 		Colors: helper.ColorsConfig{

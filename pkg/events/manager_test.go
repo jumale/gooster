@@ -29,7 +29,7 @@ func TestSubscribe(t *testing.T) {
 		assert.NoError(err)
 		handled := &handler{}
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
 		assert.Len(handled.events, 0)
 	})
@@ -39,9 +39,9 @@ func TestSubscribe(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
 		assert.Len(handled.events, 1)
 		assert.Equal("'bob' handled 'bird/eagle'", handled.events[0])
@@ -52,13 +52,13 @@ func TestSubscribe(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
-		mng.Subscribe(EventBird, handled.withName("john"))
-		mng.Subscribe(EventFish, handled.withName("eric"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
+		mng.Subscribe(handled.withName(EventBird, "john"))
+		mng.Subscribe(handled.withName(EventFish, "eric"))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
-		mng.Dispatch(Event{Id: EventFish, Data: "bass"})
-		mng.Dispatch(Event{Id: EventFish, Data: "tuna"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
+		mng.Dispatch(Event{Id: EventFish, Payload: "bass"})
+		mng.Dispatch(Event{Id: EventFish, Payload: "tuna"})
 
 		assert.Len(handled.events, 4)
 		assert.Equal("'bob' handled 'bird/eagle'", handled.events[0])
@@ -72,11 +72,11 @@ func TestSubscribe(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withNameAndPriority("bob", -10))
-		mng.Subscribe(EventBird, handled.withNameAndPriority("eric", 9999))
-		mng.Subscribe(EventBird, handled.withNameAndPriority("john", 0))
+		mng.Subscribe(handled.withNameAndPriority(EventBird, "bob", -10))
+		mng.Subscribe(handled.withNameAndPriority(EventBird, "eric", 9999))
+		mng.Subscribe(handled.withNameAndPriority(EventBird, "john", 0))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
 		assert.Len(handled.events, 3)
 		assert.Equal("'eric' handled 'bird/eagle'", handled.events[0])
@@ -89,11 +89,11 @@ func TestSubscribe(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
-		mng.Subscribe(EventBird, handled.withName("john"))
-		mng.Subscribe(EventBird, handled.withNameAndPriority("eric", 9999))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
+		mng.Subscribe(handled.withName(EventBird, "john"))
+		mng.Subscribe(handled.withNameAndPriority(EventBird, "eric", 9999))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
 		assert.Len(handled.events, 3)
 		assert.Equal("'eric' handled 'bird/eagle'", handled.events[0])
@@ -111,15 +111,15 @@ func TestExtendEvents(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
-		mng.Subscribe(EventFish, handled.withName("eric"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
+		mng.Subscribe(handled.withName(EventFish, "eric"))
 
-		mng.Extend(EventBird, extension.withName("bird_ext1"))
-		mng.Extend(EventBird, extension.withName("bird_ext2"))
-		mng.Extend(EventFish, extension.withName("fish_ext1"))
+		mng.Extend(extension.withName(EventBird, "bird_ext1"))
+		mng.Extend(extension.withName(EventBird, "bird_ext2"))
+		mng.Extend(extension.withName(EventFish, "fish_ext1"))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
-		mng.Dispatch(Event{Id: EventFish, Data: "tuna"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
+		mng.Dispatch(Event{Id: EventFish, Payload: "tuna"})
 
 		assert.Len(handled.events, 2)
 		assert.Equal("'bob' handled 'bird/bird_ext2/bird_ext1/eagle'", handled.events[0])
@@ -131,13 +131,13 @@ func TestExtendEvents(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
 
-		mng.Extend(EventBird, extension.withNameAndPriority("ext1", -10))
-		mng.Extend(EventBird, extension.withNameAndPriority("ext2", 9999))
-		mng.Extend(EventBird, extension.withNameAndPriority("ext3", 0))
+		mng.Extend(extension.withNameAndPriority(EventBird, "ext1", -10))
+		mng.Extend(extension.withNameAndPriority(EventBird, "ext2", 9999))
+		mng.Extend(extension.withNameAndPriority(EventBird, "ext3", 0))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
 		assert.Len(handled.events, 1)
 		assert.Equal("'bob' handled 'bird/ext1/ext3/ext2/eagle'", handled.events[0])
@@ -153,9 +153,9 @@ func TestDelayedStart(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
 		assert.Len(handled.events, 1)
 		assert.Equal("'bob' handled 'bird/eagle'", handled.events[0])
@@ -170,13 +170,13 @@ func TestDelayedStart(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(EventBird, handled.withName("bob"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
 
-		mng.Dispatch(Event{Id: EventBird, Data: "eagle"})
+		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 		assert.Len(handled.events, 0, "should not handle events before delayed manager has started")
 
 		// let's add another EventBird handler after the actual event has been dispatched
-		mng.Subscribe(EventBird, handled.withName("john"))
+		mng.Subscribe(handled.withName(EventBird, "john"))
 
 		// now all events should be handled by all subscribers
 		mng.Start()
@@ -191,17 +191,18 @@ type handler struct {
 	events []string
 }
 
-func (h *handler) withName(name string) Subscriber {
-	return h.withNameAndPriority(name, 0)
+func (h *handler) withName(id EventId, name string) Subscriber {
+	return h.withNameAndPriority(id, name, 0)
 }
 
-func (h *handler) withNameAndPriority(name string, priority float64) Subscriber {
+func (h *handler) withNameAndPriority(id EventId, name string, order float64) Subscriber {
 	return Subscriber{
-		Handle: func(event Event) {
-			e := fmt.Sprintf("'%s' handled '%s/%s'", name, event.Id, event.Data)
+		Id:    id,
+		Order: order,
+		Fn: func(event Event) {
+			e := fmt.Sprintf("'%s' handled '%s/%s'", name, event.Id, event.Payload)
 			h.events = append(h.events, e)
 		},
-		Priority: priority,
 	}
 }
 
@@ -209,15 +210,16 @@ type _ext struct{}
 
 var extension = _ext{}
 
-func (e _ext) withName(name string) Extension {
-	return e.withNameAndPriority(name, 0)
+func (e _ext) withName(id EventId, name string) Extension {
+	return e.withNameAndPriority(id, name, 0)
 }
 
-func (_ext) withNameAndPriority(name string, priority float64) Extension {
+func (_ext) withNameAndPriority(id EventId, name string, order float64) Extension {
 	return Extension{
-		Extend: func(data EventPayload) (newData EventPayload) {
+		Id:    id,
+		Order: order,
+		Fn: func(data EventPayload) (newData EventPayload) {
 			return fmt.Sprintf("%s/%s", name, data)
 		},
-		Priority: priority,
 	}
 }

@@ -1,16 +1,13 @@
-package workdir
+package extension
 
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	"path"
 	"sort"
 	"strings"
 )
-
-type SortExtension struct {
-	Mode SortMode
-}
 
 type SortMode uint8
 
@@ -19,19 +16,31 @@ const (
 	SortDesc
 )
 
-func (ext SortExtension) OnRefresh(ExtendableTree) dirtree.NodesHook {
-	return func(config dirtree.Config, nodes []*dirtree.Node) []*dirtree.Node {
-		return ext.sort(nodes)
-	}
+type WorkDirSortConfig struct {
+	gooster.ExtensionConfig
+	Mode SortMode
 }
 
-func (ext SortExtension) OnInput(ExtendableTree) gooster.InputHandler {
+type WorkDirSort struct {
+	cfg WorkDirSortConfig
+}
+
+func NewWorkDirSort(cfg WorkDirSortConfig) gooster.Extension {
+	return &WorkDirSort{cfg: cfg}
+}
+
+func (ext *WorkDirSort) Config() gooster.ExtensionConfig {
+	return ext.cfg.ExtensionConfig
+}
+
+func (ext *WorkDirSort) Init(m gooster.Module, ctx *gooster.AppContext) error {
+	workdir.Actions{AppContext: ctx}.ExtendSetChildren(ext.sort)
 	return nil
 }
 
-func (ext SortExtension) sort(nodes []*dirtree.Node) []*dirtree.Node {
-	byType := ext.Mode&SortByType != 0
-	ASC := ext.Mode&SortDesc == 0
+func (ext WorkDirSort) sort(nodes []*dirtree.Node) []*dirtree.Node {
+	byType := ext.cfg.Mode&SortByType != 0
+	ASC := ext.cfg.Mode&SortDesc == 0
 
 	sort.SliceStable(nodes, func(i, j int) bool {
 		a := nodes[i].Info

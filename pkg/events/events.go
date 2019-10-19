@@ -3,30 +3,32 @@ package events
 type EventId string
 type EventPayload interface{}
 type Event struct {
-	Id   EventId
-	Data EventPayload
+	Id      EventId
+	Payload EventPayload
 }
 
 func (e Event) formattedData() string {
-	return truncateString(toString(e.Data), 80)
+	return truncateString(toString(e.Payload), 80)
 }
 
 type Manager interface {
 	Dispatch(Event)
-	Subscribe(EventId, Subscriber)
-	Extend(EventId, Extension)
+	Subscribe(...Subscriber)
+	Extend(...Extension)
 }
 
-type Handler func(Event)
+type EventHandler func(Event)
 
 type Subscriber struct {
-	Handle   Handler
-	Priority float64 // higher value == earlier called
+	Id    EventId
+	Fn    EventHandler
+	Order float64 // higher value == earlier called
 }
 
-type Extender func(data EventPayload) (newData EventPayload)
+type PayloadHandler func(data EventPayload) (newData EventPayload)
 
 type Extension struct {
-	Extend   Extender
-	Priority float64 // higher value == earlier called
+	Id    EventId
+	Fn    PayloadHandler
+	Order float64 // higher value == earlier called
 }

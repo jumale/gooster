@@ -2,63 +2,105 @@ package workdir
 
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
-	"github.com/pkg/errors"
-	"path/filepath"
+	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/rivo/tview"
 )
 
-func (m *Module) refreshTree() {
-	m.Log().Check(m.tree.Refresh(m.workDir))
+const (
+	ActionRefresh      events.EventId = "workdir:refresh"
+	ActionChangeDir                   = "workdir:change_dir"
+	ActionSetChildren                 = "workdir:set_children"
+	ActionActivateNode                = "workdir:activate_node"
+	ActionCreateFile                  = "workdir:create_file"
+	ActionCreateDir                   = "workdir:create_dir"
+	ActionViewFile                    = "workdir:view_file"
+	ActionDelete                      = "workdir:delete"
+	ActionOpen                        = "workdir:open"
+)
+
+type PayloadSetChildren struct {
+	Target   *tview.TreeNode
+	Children []*dirtree.Node
 }
 
-func (m *Module) createFile(name string) {
-	parts := filepath.SplitList(name)
-	if len(parts) > 0 {
-		dir := filepath.Dir(name)
-		err := m.fs.MkdirAll(dir, 0755)
-		if err != nil {
-			m.Log().Error(errors.WithMessage(err, "creating directory"))
-		}
-	}
-
-	emptyFile, err := m.fs.Create(name)
-	if err != nil {
-		m.Log().Error(err)
-	} else if err = emptyFile.Close(); err != nil {
-		m.Log().Error(errors.WithMessage(err, "creating file"))
-	} else {
-		m.refreshTree()
-		m.setCurrentNode(name, dirtree.FindCurrent)
-	}
+type PayloadActivateNode struct {
+	Path string
+	Mode dirtree.FindMode
 }
 
-func (m *Module) createDir(dirPath string) {
-	err := m.fs.MkdirAll(dirPath, 0755)
-	if err != nil {
-		m.Log().Error(errors.WithMessage(err, "creating directory"))
-	} else {
-		m.refreshTree()
-		m.setCurrentNode(dirPath, dirtree.FindCurrent)
-	}
+type Actions struct {
+	*gooster.AppContext
 }
 
-func (m *Module) viewFile(path string) {
-	m.Log().DebugF("viewing file '%s'", path)
+func (a Actions) Refresh() {
+	a.Events().Dispatch(events.Event{Id: ActionRefresh})
 }
 
-func (m *Module) deleteNode(node *dirtree.Node) {
-	if err := m.fs.RemoveAll(node.Path); err != nil {
-		m.Log().Error(errors.WithMessage(err, "removing file/directory"))
-
-	} else {
-		m.refreshTree()
-		m.setCurrentNode(node.Path, dirtree.FindNext)
-	}
+func (a Actions) ChangeDir(path string) {
+	a.Events().Dispatch(events.Event{Id: ActionChangeDir, Payload: path})
 }
 
-func (m *Module) enterNode(node *dirtree.Node) {
-	if node.Info.IsDir() {
-		m.Actions().SetWorkDir(node.Path)
-	} else {
-		m.Log().DebugF("editing file '%s'", node.Path)
-	}
+func (a Actions) SetChildren(target *tview.TreeNode, children []*dirtree.Node) {
+	a.Events().Dispatch(events.Event{
+		Id: ActionSetChildren,
+		Payload: PayloadSetChildren{
+			Target:   target,
+			Children: children,
+		},
+	})
+}
+
+func (a Actions) ExtendSetChildren(callback func(nodes []*dirtree.Node) []*dirtree.Node) {
+	a.Events().Extend(events.Extension{
+		Id: ActionSetChildren,
+		Fn: func(data events.EventPayload) (newData events.EventPayload) {
+			payload := data.(PayloadSetChildren)
+			return PayloadSetChildren{
+				Target:   payload.Target,
+				Children: callback(payload.Children),
+			}
+		},
+	})
+}
+
+func (a Actions) ActivateNode(path string) {
+	a.Events().Dispatch(events.Event{
+		Id:      ActionActivateNode,
+		Payload: PayloadActivateNode{Path: path, Mode: dirtree.FindCurrent},
+	})
+}
+
+func (a Actions) ActivatePrevNode(path string) {
+	a.Events().Dispatch(events.Event{
+		Id:      ActionActivateNode,
+		Payload: PayloadActivateNode{Path: path, Mode: dirtree.FindPrev},
+	})
+}
+
+func (a Actions) ActivateNextNode(path string) {
+	a.Events().Dispatch(events.Event{
+		Id:      ActionActivateNode,
+		Payload: PayloadActivateNode{Path: path, Mode: dirtree.FindNext},
+	})
+}
+
+func (a Actions) CreateFile(name string) {
+	a.Events().Dispatch(events.Event{Id: ActionCreateFile, Payload: name})
+}
+
+func (a Actions) CreateDir(dirPath string) {
+	a.Events().Dispatch(events.Event{Id: ActionCreateDir, Payload: dirPath})
+}
+
+func (a Actions) ViewFile(path string) {
+	a.Events().Dispatch(events.Event{Id: ActionViewFile, Payload: path})
+}
+
+func (a Actions) Delete(path string) {
+	a.Events().Dispatch(events.Event{Id: ActionDelete, Payload: path})
+}
+
+func (a Actions) Open(path string) {
+	a.Events().Dispatch(events.Event{Id: ActionOpen, Payload: path})
 }

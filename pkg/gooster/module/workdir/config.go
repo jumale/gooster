@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	gooster.ModuleConfig `json:",inline"`
+	InitDir              string       `json:"init_dir"`
 	Colors               ColorsConfig `json:"colors"`
 	Keys                 KeysConfig   `json:"keys"`
 }
@@ -23,5 +24,5 @@ type KeysConfig struct {
 	NewDir  tcell.Key `json:"new_dir"`
 	View    tcell.Key `json:"view"`
 	Delete  tcell.Key `json:"delete"`
-	Enter   tcell.Key `json:"enter"`
+	Open    tcell.Key `json:"open"`
 }

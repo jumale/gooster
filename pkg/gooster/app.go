@@ -1,33 +1,20 @@
 package gooster
 
 import (
-	"fmt"
 	"github.com/gdamore/tcell"
-	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/events"
-	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/rivo/tview"
-	"os"
 )
 
-type AppConfig struct {
-	Grid          GridConfig
-	Keys          KeysConfig
-	InitDir       string
-	LogLevel      log.Level
-	EventsLogPath string
-	Debug         bool
-	Dialog        dialog.Config
-}
-
-type GridConfig struct {
-	Cols []int
-	Rows []int
-}
-
-type KeysConfig struct {
-	Exit tcell.Key
+type App struct {
+	*AppContext
+	cfg       AppConfig
+	root      *tview.Application
+	pages     *tview.Pages
+	modules   []Module
+	focusMap  map[tcell.Key]tview.Primitive
+	lastFocus tview.Primitive
 }
 
 func NewApp(cfg AppConfig) (*App, error) {
@@ -36,12 +23,9 @@ func NewApp(cfg AppConfig) (*App, error) {
 		root.SetScreen(NewScreenStub(10, 10))
 	}
 
-	ctx, err := NewAppContext(cfg)
+	ctx, err := newAppContext(cfg, func() { root.Draw() })
 	if err != nil {
 		return nil, errors.WithMessage(err, "init app context")
-	}
-	ctx.actions.afterAction = func(e events.Event) {
-		root.Draw()
 	}
 
 	ctx.log.Info("Start initializing app")
@@ -50,187 +34,100 @@ func NewApp(cfg AppConfig) (*App, error) {
 	pages.SetBackgroundColor(tcell.ColorDefault)
 
 	app := &App{
-		cfg:      cfg,
-		root:     root,
-		pages:    pages,
-		ctx:      ctx,
-		focusMap: make(map[tcell.Key]tview.Primitive),
-		modal:    newModalManger(cfg.Dialog, ctx, pages),
-	}
-	app.modal.onClose = func() {
-		if app.lastFocus != nil {
-			app.root.SetFocus(app.lastFocus)
-		}
+		AppContext: ctx,
+		cfg:        cfg,
+		root:       root,
+		pages:      pages,
+		focusMap:   make(map[tcell.Key]tview.Primitive),
 	}
 
-	ctx.actions.OnWorkDirChange(func(newPath string) {
-		if err := os.Chdir(newPath); err != nil {
-			ctx.log.Error(errors.WithMessage(err, "change work dir"))
-		}
-	})
-	if cfg.InitDir == "" {
-		cfg.InitDir = getWd()
-	}
-	ctx.actions.SetWorkDir(cfg.InitDir)
 	ctx.log.Info("App is initialized")
 
 	return app, nil
 }
 
-type App struct {
-	cfg       AppConfig
-	root      *tview.Application
-	pages     *tview.Pages
-	modules   []moduleDefinition
-	ctx       *AppContext
-	focusMap  map[tcell.Key]tview.Primitive
-	lastFocus tview.Primitive
-	modal     *modalManger
-}
-
-func (app *App) RegisterModule(mod Module) {
-	view, cfg, err := mod.Init(app.ctx)
-	if err != nil {
+func (app *App) RegisterModule(mod Module, extensions ...Extension) {
+	if err := mod.Init(app.AppContext); err != nil {
 		panic(errors.WithMessage(err, "init module"))
 	}
 
+	for _, ext := range extensions {
+		if err := ext.Init(mod, app.AppContext); err != nil {
+			panic(errors.WithMessage(err, "init extension"))
+		}
+	}
+
+	cfg := mod.Config()
 	if !cfg.Enabled {
 		return
 	}
 
-	app.modules = append(app.modules, moduleDefinition{
-		module: mod,
-		view:   view,
-		cfg:    cfg,
-	})
+	app.modules = append(app.modules, mod)
 	if cfg.FocusKey != 0 {
-		app.focusMap[cfg.FocusKey] = view
+		app.focusMap[cfg.FocusKey] = mod
 	}
 
-	app.ctx.log.InfoF("Initializing module [lightgreen]'%s'[-] with config [lightblue]%+v[-]", mod.Name(), cfg)
+	app.Log().InfoF("Initialized module [lightgreen]'%T'[-] with config [lightblue]%+v[-]", mod, cfg)
 }
 
 func (app *App) Run() {
-	app.ctx.log.Info("Starting App")
-	app.ctx.actions.registerActionOwners(app.modules)
-	app.root.SetInputCapture(app.createInputHandler(
-		app.handleFocusKeys,
-		app.handleInterrupt,
-		app.handleCloseDialog,
-		app.handleExit,
-	))
+	// init event handlers
+	app.Events().Subscribe(
+		events.Subscriber{Id: ActionExit, Fn: app.handleExitEvent, Order: -9999}, // as late as possible
+		events.Subscriber{Id: ActionSetFocus, Fn: app.handleSetFocusEvent},
+		events.Subscriber{Id: ActionOpenDialog, Fn: app.handleEventOpenDialog},
+		events.Subscriber{Id: ActionCloseDialog, Fn: app.handleEventCloseDialog},
+		events.Subscriber{Id: ActionAddTab, Fn: app.handleEventAddTab},
+		events.Subscriber{Id: ActionShowTab, Fn: app.handleEventShowTab},
+		events.Subscriber{Id: ActionRemoveTab, Fn: app.handleEventRemoveTab},
+	)
 
-	defer func() {
-		if err := app.Close(); err != nil {
-			panic(errors.WithMessage(err, "closing app"))
-		}
-	}()
+	// init key handlers
+	handleKeyEvents(&appInputAdaptor{app.root}, app.withFocusKeys(KeyEventHandlers{
+		tcell.KeyCtrlC:    app.handleKeyCtrlC,
+		tcell.KeyEscape:   app.handleKeyEscape,
+		app.cfg.Keys.Exit: app.handleKeyExit,
+	}))
 
-	app.ctx.actions.OnAppExit(func() {
-		app.ctx.log.Info("Stopping App")
-		if err := app.Close(); err != nil {
-			app.ctx.Log().Error(errors.WithMessage(err, "stopping app"))
-		}
-		app.root.Stop()
-	})
-
-	app.ctx.actions.OnSetFocus(func(view tview.Primitive) {
-		app.ctx.log.DebugF("App: focusing view: %T", view)
-		app.root.SetFocus(view)
-	})
-
-	app.ctx.em.Start()
-
-	app.newTab()
+	// init services and views
+	app.em.Start()
+	app.AppActions().AddTab(Tab{Id: initialTabId, View: app.createMainGrid()})
 	app.root.SetRoot(app.pages, true)
 
+	// start the app
+	app.Log().Info("Starting App")
 	if err := app.root.Run(); err != nil {
 		panic(errors.WithMessage(err, "run app"))
 	}
 }
 
-func (app *App) Close() error {
-	app.ctx.log.Info("Closing App")
-	if err := app.ctx.Close(); err != nil {
-		return errors.WithMessage(err, "closing app context")
-	}
-
-	return nil
-}
-
-func (app *App) newTab() {
-	app.ctx.log.Debug("Creating new tab")
+func (app *App) createMainGrid() tview.Primitive {
 	grid := tview.NewGrid()
 	grid.SetBackgroundColor(tcell.ColorDefault)
 	grid.SetColumns(app.cfg.Grid.Cols...)
 	grid.SetRows(app.cfg.Grid.Rows...)
 
-	for _, def := range app.modules {
+	for _, mod := range app.modules {
+		cfg := mod.Config()
 		grid.AddItem(
-			def.view,
-			def.cfg.Row, def.cfg.Col,
-			def.cfg.Height, def.cfg.Width,
+			mod,
+			cfg.Row, cfg.Col,
+			cfg.Height, cfg.Width,
 			0, 0,
-			def.cfg.Focused,
+			cfg.Focused,
 		)
 	}
-
-	pageId := fmt.Sprintf("gooster_tab_%d", app.pages.GetPageCount()+1)
-
-	app.pages.AddPage(pageId, grid, true, true)
+	return grid
 }
 
-func (app *App) createInputHandler(handlers ...InputHandler) InputCapture {
-	return func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() != tcell.KeyRune {
-			app.ctx.log.DebugF("App: pressed key %s", tcell.KeyNames[event.Key()])
+// withFocusKeys adds handles for every focus key
+func (app *App) withFocusKeys(keyHandlers KeyEventHandlers) KeyEventHandlers {
+	for focusKey, view := range app.focusMap {
+		v := view
+		keyHandlers[focusKey] = func(event *tcell.EventKey) *tcell.EventKey {
+			app.AppActions().SetFocus(v)
+			return nil
 		}
-
-		for _, handler := range handlers {
-			if newEvent, handled := handler(event); handled {
-				return newEvent
-			}
-		}
-		return event
 	}
-}
-
-func (app *App) handleInterrupt(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
-	if event.Key() == tcell.KeyCtrlC {
-		app.ctx.log.Debug("Interrupting latest command")
-		app.ctx.actions.InterruptLatestCommand()
-		return &tcell.EventKey{}, true
-	}
-
-	return event, false
-}
-
-func (app *App) handleCloseDialog(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
-	if event.Key() == tcell.KeyEscape && app.modal.isOpen {
-		app.ctx.log.Debug("Closing dialog")
-		app.ctx.actions.CloseDialog()
-
-		return event, true
-	}
-
-	return event, false
-}
-
-func (app *App) handleFocusKeys(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
-	if view, ok := app.focusMap[event.Key()]; ok {
-		app.ctx.log.DebugF("App: focusing view by key %s", tcell.KeyNames[event.Key()])
-		app.ctx.actions.SetFocus(view)
-		app.lastFocus = view
-		return event, true
-	}
-
-	return event, false
-}
-
-func (app *App) handleExit(event *tcell.EventKey) (newEvent *tcell.EventKey, handled bool) {
-	if event.Key() == app.cfg.Keys.Exit {
-		app.ctx.actions.Exit()
-		return event, true
-	}
-	return event, false
+	return keyHandlers
 }
