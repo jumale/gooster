@@ -1,9 +1,9 @@
 package prompt
 
 import (
-	"context"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/history"
 	"github.com/rivo/tview"
@@ -11,18 +11,20 @@ import (
 
 type Module struct {
 	*gooster.BaseModule
-	cfg        Config
-	view       *tview.InputField
-	runner     *CmdRunner
-	history    *history.Manager
-	actions    Actions
-	cancelFunc context.CancelFunc
+	cfg     Config
+	fs      filesys.FileSys
+	view    *tview.InputField
+	history *history.Manager
+	actions Actions
+	cmd     *Command
 }
 
 func NewModule(cfg Config) *Module {
-	return &Module{
-		cfg: cfg,
-	}
+	return newModule(cfg, filesys.Default{})
+}
+
+func newModule(cfg Config, fs filesys.FileSys) *Module {
+	return &Module{cfg: cfg, fs: fs}
 }
 
 func (m *Module) Init(ctx *gooster.AppContext) error {
@@ -34,11 +36,6 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		HistoryFile: m.cfg.HistoryFile,
 		Log:         ctx.Log(),
 	})
-	m.runner = &CmdRunner{
-		AppContext: ctx,
-		Stdout:     ctx.Output(),
-		Stderr:     ctx.Output(),
-	}
 
 	m.view.SetLabel(" > ")
 	m.view.SetBorder(false)
@@ -52,6 +49,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		events.Subscriber{Id: ActionClearPrompt, Fn: m.handleEventClearPrompt},
 		events.Subscriber{Id: ActionExecCommand, Fn: m.handleEventExecCommand},
 		events.Subscriber{Id: ActionInterruptCommand, Fn: m.handleInterruptCommand},
+		events.Subscriber{Id: ActionSendUserInput, Fn: m.handleSendUserInput},
 	)
 	m.HandleKeyEvents(gooster.KeyEventHandlers{
 		m.cfg.Keys.HistoryPrev: m.handleKeyHistoryPrev,
@@ -69,6 +67,10 @@ func (m *Module) submit(key tcell.Key) {
 	}
 	switch key {
 	case tcell.KeyEnter:
-		m.actions.ExecCommand(input)
+		if m.cmd == nil {
+			m.actions.ExecCommand(input)
+		} else {
+			m.actions.SendUserInput(input)
+		}
 	}
 }

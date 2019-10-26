@@ -1,6 +1,7 @@
 package prompt
 
 import (
+	"fmt"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
 )
@@ -10,6 +11,7 @@ const (
 	ActionClearPrompt                     = "prompt:clear"
 	ActionExecCommand                     = "command:exec"
 	ActionInterruptCommand                = "command:interrupt"
+	ActionSendUserInput                   = "command:send_user_input"
 )
 
 type Actions struct {
@@ -30,4 +32,16 @@ func (a Actions) ExecCommand(cmd string) {
 
 func (a Actions) InterruptCommand() {
 	a.Events().Dispatch(events.Event{Id: ActionInterruptCommand})
+}
+
+func (a Actions) SendUserInput(input string) {
+	a.Events().Dispatch(events.Event{Id: ActionSendUserInput, Payload: input})
+}
+
+func (a Actions) writeOutputF(format string, v ...interface{}) {
+	a.Events().Dispatch(events.Event{Id: "output:write", Payload: fmt.Sprintf(format, v...)})
+}
+
+func (a Actions) changeDir(path string) {
+	a.Events().Dispatch(events.Event{Id: "workdir:change_dir", Payload: path}) // @todo use Actions
 }

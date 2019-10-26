@@ -2,113 +2,79 @@ package prompt
 
 import (
 	"context"
-	"github.com/jumale/gooster/pkg/events"
-	"github.com/jumale/gooster/pkg/gooster"
 	"io"
-	"os"
 	"os/exec"
-	"regexp"
 	"strings"
 )
 
 type Command struct {
-	Cmd   string
-	Async bool
-	Ctx   context.Context
+	cmd      string
+	runner   *exec.Cmd
+	cancel   context.CancelFunc
+	input    io.WriteCloser
+	lastChar byte
 }
 
-type CmdRunner struct {
-	Stdout io.Writer
-	Stderr io.Writer
-	*gooster.AppContext
+func NewCommand(cmd string) *Command {
+	ctx, cancel := context.WithCancel(context.Background())
+	c := exec.CommandContext(ctx, "bash", "-l", "-c", cmd)
+	input, _ := c.StdinPipe()
+
+	return &Command{cmd: cmd, runner: c, cancel: cancel, input: input}
 }
 
-func (c *CmdRunner) Run(cmd Command) error {
-	if cmd.Async {
-		go func() {
-			err := c.run(cmd.Cmd, cmd.Ctx)
-			if err != nil {
-				c.Log().Error(err)
-			}
-		}()
-		return nil
-
-	} else {
-		return c.run(cmd.Cmd, cmd.Ctx)
-	}
+func (c *Command) Command() string {
+	return c.cmd
 }
 
-func (c *CmdRunner) run(input string, ctx context.Context) error {
-	c.Log().DebugF("Executing command `%s`", input)
+func (c *Command) SetOutput(w io.Writer) *Command {
+	w = &writerHook{
+		target: w,
+		hook: func(p []byte) {
+			c.lastChar = p[len(p)-1]
+		},
+	}
+	c.runner.Stdout = w
+	c.runner.Stderr = w
+	return c
+}
 
-	// If it's exit command
-	if input == "exit" {
-		go func() {
-			c.Log().Debug("Executing exit command")
-			c.AppActions().Exit()
-		}()
-		return nil
+func (c *Command) Run() error {
+	return c.runner.Run()
+}
+
+func (c *Command) Cancel() {
+	_ = c.input.Close()
+	c.cancel()
+}
+
+func (c *Command) Write(p []byte) (n int, err error) {
+	return c.input.Write(p)
+}
+
+func (c *Command) LastChar() byte {
+	return c.lastChar
+}
+
+func (m *Module) clearCommand() {
+	lineBreak := ""
+	if m.cmd != nil && m.cmd.LastChar() != newLine {
+		lineBreak = "\n"
 	}
 
-	// If it looks like "cd" command:
-	if path := detectWorkDirPath(input); path != "" {
-		c.Log().DebugF("Detected cd path '%s' from command '%s'", path, input)
-		c.Events().Dispatch(events.Event{Id: "workdir:change_dir", Payload: path}) // @todo use Actions
-		return nil
-	}
-
-	// Otherwise just exec the command:
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	cmd := exec.CommandContext(ctx, "bash", "-l", "-c", input)
-	cmd.Stderr = c.Stderr
-	cmd.Stdout = c.Stdout
-	c.Log().DebugF("Starting command `%s`", input)
-	err := cmd.Run()
-	// Most commands would return errors like "exit status 1" (e.g. `echo "foo" | grep bar`).
-	// We're not interested in those errors and don't want to flood our log with them,
-	// so let's filter them out.
-	if err != nil && !strings.HasPrefix(err.Error(), "exit status") {
-		return err
-	} else {
-		return nil
+	m.cmd = nil
+	if m.cfg.PrintDivider {
+		_, _, width, _ := m.view.GetInnerRect()
+		m.actions.writeOutputF("%s[%s]%s[-]\n", lineBreak, getColorName(m.cfg.Colors.Divider), strings.Repeat("-", width-2))
 	}
 }
 
-var (
-	userHomeDir = os.UserHomeDir
-	getWd       = os.Getwd
-)
+type writerHook struct {
+	target io.Writer
+	hook   func(p []byte)
+}
 
-var pathRegex = regexp.MustCompile(`^(?:(?:\.{1,2}/)|(?:(?:/[^/]+)+))`)
-
-func detectWorkDirPath(command string) (path string) {
-	args := strings.Split(command, " ")
-
-	if args[0] == "cd" && len(args) >= 2 {
-		path = args[1]
-	} else if pathRegex.MatchString(args[0]) {
-		path = args[0]
-	}
-
-	if path == "" {
-		return ""
-	}
-
-	if strings.HasPrefix(path, "~") {
-		ud, _ := userHomeDir()
-		path = strings.Replace(path, "~", ud, 1)
-	}
-
-	if strings.HasPrefix(path, "./") {
-		path = strings.Replace(path, "./", "", 1)
-	}
-
-	if !strings.HasPrefix(path, "/") {
-		wd, _ := getWd()
-		path = strings.Replace(wd+"/"+path, "//", "/", -1)
-	}
-
-	return path
+func (l *writerHook) Write(p []byte) (n int, err error) {
+	l.hook(p)
+	return l.target.Write(p)
 }
