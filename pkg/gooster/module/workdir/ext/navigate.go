@@ -1,4 +1,4 @@
-package extension
+package ext
 
 import (
 	"github.com/gdamore/tcell"
@@ -10,34 +10,34 @@ import (
 	"time"
 )
 
-type WorkDirNavigateConfig struct {
+type TypingSearchConfig struct {
 	gooster.ExtensionConfig
 	KeyPressInterval time.Duration
 }
 
-type WorkDirNavigate struct {
+type TypingSearch struct {
 	search   string
 	children []*dirtree.Node
 	timer    *time.Timer
-	cfg      WorkDirNavigateConfig
-	workdir  workdir.Actions
+	cfg      TypingSearchConfig
+	workDir  workdir.Actions
 	sync.Mutex
 	*gooster.AppContext
 }
 
-func NewWorkDirNavigate(cfg WorkDirNavigateConfig) gooster.Extension {
-	return &WorkDirNavigate{cfg: cfg}
+func NewTypingSearch(cfg TypingSearchConfig) gooster.Extension {
+	return &TypingSearch{cfg: cfg}
 }
 
-func (ext *WorkDirNavigate) Config() gooster.ExtensionConfig {
+func (ext *TypingSearch) Config() gooster.ExtensionConfig {
 	return ext.cfg.ExtensionConfig
 }
 
-func (ext *WorkDirNavigate) Init(m gooster.Module, ctx *gooster.AppContext) error {
+func (ext *TypingSearch) Init(m gooster.Module, ctx *gooster.AppContext) error {
 	ext.AppContext = ctx
-	ext.workdir = workdir.Actions{AppContext: ctx}
+	ext.workDir = workdir.Actions{AppContext: ctx}
 
-	ext.workdir.ExtendSetChildren(func(nodes []*dirtree.Node) []*dirtree.Node {
+	ext.workDir.ExtendSetChildren(func(nodes []*dirtree.Node) []*dirtree.Node {
 		ext.Lock()
 		ext.children = nodes
 		ext.Unlock()
@@ -53,7 +53,7 @@ func (ext *WorkDirNavigate) Init(m gooster.Module, ctx *gooster.AppContext) erro
 	return nil
 }
 
-func (ext *WorkDirNavigate) navigate(event *tcell.EventKey) {
+func (ext *TypingSearch) navigate(event *tcell.EventKey) {
 	if event.Key() != tcell.KeyRune {
 		return
 	}
@@ -71,18 +71,18 @@ func (ext *WorkDirNavigate) navigate(event *tcell.EventKey) {
 	ext.Unlock()
 }
 
-func (ext *WorkDirNavigate) clearSearch() {
+func (ext *TypingSearch) clearSearch() {
 	<-ext.timer.C
 	ext.Lock()
 	ext.search = ""
 	ext.Unlock()
 }
 
-func (ext *WorkDirNavigate) focusNode(nodes []*dirtree.Node, search string) {
+func (ext *TypingSearch) focusNode(nodes []*dirtree.Node, search string) {
 	//ext.log.DebugF("focus node `%s`", search)
 	for _, child := range nodes {
 		if strings.Contains(strings.ToLower(child.GetText()), search) {
-			ext.workdir.ActivateNode(child.Path)
+			ext.workDir.ActivateNode(child.Path)
 			return
 		}
 	}

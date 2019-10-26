@@ -1,4 +1,4 @@
-package extension
+package ext
 
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
@@ -16,29 +16,29 @@ const (
 	SortDesc
 )
 
-type WorkDirSortConfig struct {
+type SortTreeConfig struct {
 	gooster.ExtensionConfig
 	Mode SortMode
 }
 
-type WorkDirSort struct {
-	cfg WorkDirSortConfig
+type SortTree struct {
+	cfg SortTreeConfig
 }
 
-func NewWorkDirSort(cfg WorkDirSortConfig) gooster.Extension {
-	return &WorkDirSort{cfg: cfg}
+func NewSortTree(cfg SortTreeConfig) gooster.Extension {
+	return &SortTree{cfg: cfg}
 }
 
-func (ext *WorkDirSort) Config() gooster.ExtensionConfig {
+func (ext *SortTree) Config() gooster.ExtensionConfig {
 	return ext.cfg.ExtensionConfig
 }
 
-func (ext *WorkDirSort) Init(m gooster.Module, ctx *gooster.AppContext) error {
+func (ext *SortTree) Init(m gooster.Module, ctx *gooster.AppContext) error {
 	workdir.Actions{AppContext: ctx}.ExtendSetChildren(ext.sort)
 	return nil
 }
 
-func (ext WorkDirSort) sort(nodes []*dirtree.Node) []*dirtree.Node {
+func (ext SortTree) sort(nodes []*dirtree.Node) []*dirtree.Node {
 	byType := ext.cfg.Mode&SortByType != 0
 	ASC := ext.cfg.Mode&SortDesc == 0
 

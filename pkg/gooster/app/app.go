@@ -4,12 +4,12 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
-	"github.com/jumale/gooster/pkg/gooster/extension"
 	"github.com/jumale/gooster/pkg/gooster/module/helper"
 	"github.com/jumale/gooster/pkg/gooster/module/output"
 	"github.com/jumale/gooster/pkg/gooster/module/prompt"
 	"github.com/jumale/gooster/pkg/gooster/module/status"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
+	workdirExt "github.com/jumale/gooster/pkg/gooster/module/workdir/ext"
 	"github.com/jumale/gooster/pkg/log"
 	"os"
 	"strings"
@@ -75,12 +75,12 @@ func Run() {
 			Delete:  tcell.KeyF8,
 			Open:    tcell.KeyEnter,
 		},
-	}), extension.NewWorkDirSort(extension.WorkDirSortConfig{
+	}), workdirExt.NewSortTree(workdirExt.SortTreeConfig{
 		ExtensionConfig: gooster.ExtensionConfig{
 			Enabled: true,
 		},
-		Mode: extension.SortByType,
-	}), extension.NewWorkDirNavigate(extension.WorkDirNavigateConfig{
+		Mode: workdirExt.SortByType,
+	}), workdirExt.NewTypingSearch(workdirExt.TypingSearchConfig{
 		ExtensionConfig: gooster.ExtensionConfig{
 			Enabled: true,
 		},

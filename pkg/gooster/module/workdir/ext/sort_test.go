@@ -1,4 +1,4 @@
-package extension
+package ext
 
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
@@ -52,7 +52,7 @@ func TestSortExtension(t *testing.T) {
 				"aaa.txt",
 				"ccc.txt",
 			},
-			Actual(WorkDirSort{WorkDirSortConfig{Mode: SortByType}}.sort(Input{
+			Actual(SortTree{SortTreeConfig{Mode: SortByType}}.sort(Input{
 				file("ccc.txt"),
 				dir("bbb"),
 				file("aaa.txt"),
@@ -143,7 +143,7 @@ func file(name string) *dirtree.Node {
 
 func sortByExtension(mode SortMode, nodes []*dirtree.Node) []string {
 	input := append(nodes[:0:0], nodes...)
-	return Actual(WorkDirSort{WorkDirSortConfig{Mode: mode}}.sort(input))
+	return Actual(SortTree{SortTreeConfig{Mode: mode}}.sort(input))
 }
 
 func Actual(nodes []*dirtree.Node) (names []string) {
