@@ -2,6 +2,7 @@ package output
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/ansi"
 	"github.com/jumale/gooster/pkg/convert"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
@@ -30,6 +31,11 @@ type Module struct {
 
 func (m *Module) Init(ctx *gooster.AppContext) error {
 	view := tview.NewTextView()
+	output := ansi.NewWriter(view, ansi.WriterConfig{
+		DefaultFg: m.cfg.Colors.Text,
+		DefaultBg: m.cfg.Colors.Bg,
+	})
+
 	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, view, view.Box)
 
 	view.SetBorder(false)
@@ -41,7 +47,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 
 	m.Events().Subscribe(
 		events.Subscriber{Id: ActionWrite, Fn: func(event events.Event) {
-			if _, err := view.Write(convert.ToBytes(event.Payload)); err != nil {
+			if _, err := output.Write(convert.ToBytes(event.Payload)); err != nil {
 				m.Log().Error(errors.WithMessage(err, "write to output"))
 			}
 		}},
