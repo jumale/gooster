@@ -5,6 +5,7 @@ import (
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/jumale/gooster/pkg/gooster/module/helper"
 	"github.com/jumale/gooster/pkg/history"
 	"github.com/rivo/tview"
 )
@@ -16,6 +17,7 @@ type Module struct {
 	view    *tview.InputField
 	history *history.Manager
 	actions Actions
+	helper  helper.Actions
 	cmd     *Command
 }
 
@@ -31,6 +33,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	m.view = tview.NewInputField()
 	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, m.view, m.view.Box)
 	m.actions = Actions{ctx}
+	m.helper = helper.Actions{AppContext: ctx}
 
 	m.history = history.NewManager(history.Config{
 		HistoryFile: m.cfg.HistoryFile,
@@ -66,6 +69,9 @@ func (m *Module) submit(key tcell.Key) {
 		return
 	}
 	switch key {
+	case tcell.KeyTab:
+		m.helper.SetCompletion(input, nil)
+
 	case tcell.KeyEnter:
 		if m.cmd == nil {
 			m.actions.ExecCommand(input)
