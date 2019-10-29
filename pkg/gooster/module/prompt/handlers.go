@@ -45,7 +45,7 @@ func (m *Module) handleEventExecCommand(event events.Event) {
 	}
 
 	m.view.SetText("")
-	m.cmd = NewCommand(command).SetOutput(m.Output())
+	m.cmd = NewCommand(command).SetOutput(m.actions.outputWriter())
 	go func() {
 		m.Log().DebugF("Starting command `%s`", command)
 		if err := m.cmd.Run(); err != nil {
@@ -55,6 +55,7 @@ func (m *Module) handleEventExecCommand(event events.Event) {
 		}
 		m.Log().DebugF("Command finished", command)
 		m.clearCommand()
+		m.AppActions().Draw()
 	}()
 }
 

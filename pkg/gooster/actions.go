@@ -10,6 +10,7 @@ import (
 const (
 	ActionExit        events.EventId = "app:exit"
 	ActionSetFocus                   = "app:set_focus"
+	ActionDraw                       = "app:draw"
 	ActionOpenDialog                 = "app:open_dialog"
 	ActionCloseDialog                = "app:close_dialog"
 	ActionAddTab                     = "app:add_tab"
@@ -23,6 +24,10 @@ type Actions struct {
 
 func (a Actions) Exit() {
 	a.ctx.Events().Dispatch(events.Event{Id: ActionExit})
+}
+
+func (a Actions) Draw() {
+	a.ctx.Events().Dispatch(events.Event{Id: ActionDraw})
 }
 
 func (a Actions) SetFocus(view tview.Primitive) {

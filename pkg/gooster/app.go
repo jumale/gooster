@@ -75,6 +75,7 @@ func (app *App) Run() {
 	app.Events().Subscribe(
 		events.Subscriber{Id: ActionExit, Fn: app.handleExitEvent, Order: -9999}, // as late as possible
 		events.Subscriber{Id: ActionSetFocus, Fn: app.handleSetFocusEvent},
+		events.Subscriber{Id: ActionDraw, Fn: app.handleDrawEvent},
 		events.Subscriber{Id: ActionOpenDialog, Fn: app.handleEventOpenDialog},
 		events.Subscriber{Id: ActionCloseDialog, Fn: app.handleEventCloseDialog},
 		events.Subscriber{Id: ActionAddTab, Fn: app.handleEventAddTab},

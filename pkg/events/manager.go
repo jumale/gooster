@@ -121,11 +121,12 @@ func (em *DefaultManager) Extend(extensions ...Extension) {
 	}
 }
 
-func (em *DefaultManager) Start() {
+func (em *DefaultManager) Init() error {
 	em.started = true
 	for _, event := range em.buffer {
 		em.Dispatch(event)
 	}
+	return nil
 }
 
 func (em *DefaultManager) Close() error {

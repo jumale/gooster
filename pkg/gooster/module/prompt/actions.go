@@ -39,9 +39,26 @@ func (a Actions) SendUserInput(input string) {
 }
 
 func (a Actions) writeOutputF(format string, v ...interface{}) {
-	a.Events().Dispatch(events.Event{Id: "output:write", Payload: fmt.Sprintf(format, v...)})
+	a.Events().Dispatch(events.Event{Id: "output:write", Payload: fmt.Sprintf(format, v...)}) // @todo use Actions
 }
 
 func (a Actions) changeDir(path string) {
 	a.Events().Dispatch(events.Event{Id: "workdir:change_dir", Payload: path}) // @todo use Actions
+}
+
+func (a Actions) outputWriter() *outputWriter {
+	return &outputWriter{a.Events()}
+}
+
+type outputWriter struct {
+	em events.Manager
+}
+
+func (o *outputWriter) Write(p []byte) (n int, err error) {
+	o.em.Dispatch(events.Event{
+		Id:      "output:write", // @todo use Actions
+		Payload: p,
+	})
+	o.em.Dispatch(events.Event{Id: gooster.ActionDraw})
+	return len(p), nil
 }

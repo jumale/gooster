@@ -17,6 +17,10 @@ func (app *App) handleExitEvent(events.Event) {
 	app.root.Stop()
 }
 
+func (app *App) handleDrawEvent(events.Event) {
+	app.root.Draw()
+}
+
 func (app *App) handleSetFocusEvent(event events.Event) {
 	if event.Payload == nil {
 		return
