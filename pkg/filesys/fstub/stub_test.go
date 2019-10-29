@@ -8,10 +8,11 @@ import (
 
 func TestBuilder(t *testing.T) {
 	assert := _assert.New(t)
+	cfg := Config{}
 
 	t.Run("Add", func(t *testing.T) {
 		t.Run("should add single file", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			builder := &builder{stub: stub}
 
 			builder.Add("foo.txt", NewFile())
@@ -22,7 +23,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should add file with nested path", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			builder := &builder{stub: stub}
 
 			builder.Add("foo/bar/baz.txt", NewFile())
@@ -35,7 +36,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should add nested file to a sub-dir", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			builder := &builder{stub: stub, path: "foo"}
 
 			builder.Add("bar/baz.txt", NewFile())
@@ -48,7 +49,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should add file with abs path", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			builder := &builder{stub: stub}
 
 			builder.Add("/foo.txt", NewFile())
@@ -59,7 +60,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should add file with nested abs path", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			builder := &builder{stub: stub}
 
 			builder.Add("/foo/bar.txt", NewFile())
@@ -71,7 +72,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should ignore context path when abs path is provided", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			files := stub.files
 			builder := &builder{stub: stub, path: "some/context/path"}
 
@@ -89,7 +90,7 @@ func TestBuilder(t *testing.T) {
 
 	t.Run("AddDir", func(t *testing.T) {
 		t.Run("should add dir and return a new builder with sub-dir", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			files := stub.files
 			builder := &builder{stub: stub, path: "foo"}
 
@@ -114,7 +115,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should add dir with abs path", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			files := stub.files
 			builder := &builder{stub: stub}
 
@@ -127,7 +128,7 @@ func TestBuilder(t *testing.T) {
 		})
 
 		t.Run("should add dir with nested abs path", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			files := stub.files
 			builder := &builder{stub: stub}
 
@@ -143,10 +144,11 @@ func TestBuilder(t *testing.T) {
 
 func TestStub(t *testing.T) {
 	assert := _assert.New(t)
+	cfg := Config{}
 
 	t.Run("ReadDir", func(t *testing.T) {
 		t.Run("should return all items in directory", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 
 			stub.Root().
 				AddDir("bar/foo").
@@ -167,7 +169,7 @@ func TestStub(t *testing.T) {
 		})
 
 		t.Run("should find by both local and global paths", func(t *testing.T) {
-			stub := New(&Props{WorkDir: "/wd"})
+			stub := New(Config{WorkDir: "/wd"})
 
 			stub.Root().
 				AddDir("foo/bar").
@@ -187,7 +189,7 @@ func TestStub(t *testing.T) {
 
 	t.Run("Open", func(t *testing.T) {
 		t.Run("should open file if exists", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			stub.Root().Add("foo/bar.txt", NewFile())
 
 			f, err := stub.Open("foo/bar.txt")
@@ -197,7 +199,7 @@ func TestStub(t *testing.T) {
 		})
 
 		t.Run("should return error if file does not exist", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 
 			f, err := stub.Open("foo.txt")
 			assert.Error(err)
@@ -207,7 +209,7 @@ func TestStub(t *testing.T) {
 
 	t.Run("Create", func(t *testing.T) {
 		t.Run("should open file if exists", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 			stub.Root().Add("foo/bar.txt", NewFile("lorem ipsum"))
 
 			f, err := stub.Create("foo/bar.txt")
@@ -220,7 +222,7 @@ func TestStub(t *testing.T) {
 		})
 
 		t.Run("should create a new file if does not exist", func(t *testing.T) {
-			stub := New(nil)
+			stub := New(cfg)
 
 			f, err := stub.Create("foo/bar.txt")
 			actual := f.(*FileStub)

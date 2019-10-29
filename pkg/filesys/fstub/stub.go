@@ -14,19 +14,16 @@ const slash = string(os.PathSeparator)
 type filePath = string
 
 type Stub struct {
-	props *Props
+	props Config
 	files map[filePath]*FileStub
 }
 
-type Props struct {
+type Config struct {
 	WorkDir string
 	HomeDir string
 }
 
-func New(props *Props) *Stub {
-	if props == nil {
-		props = &Props{}
-	}
+func New(props Config) *Stub {
 	if props.HomeDir == "" {
 		props.HomeDir = "/home/john"
 	}

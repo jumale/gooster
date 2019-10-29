@@ -8,7 +8,7 @@ import (
 
 func TestDetectWorkDirPath(t *testing.T) {
 	assert := _assert.New(t)
-	fsProps := &fstub.Props{
+	fsProps := fstub.Config{
 		WorkDir: "/work/dir",
 		HomeDir: "/home/dir",
 	}

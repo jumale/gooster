@@ -9,7 +9,7 @@ import (
 
 func TestHistory(t *testing.T) {
 	assert := _assert.New(t)
-	fsProps := &fstub.Props{
+	fsProps := fstub.Config{
 		WorkDir: "/wd",
 		HomeDir: "/hd",
 	}
