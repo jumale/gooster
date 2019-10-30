@@ -113,6 +113,25 @@ func (h *Manager) Next() string {
 	return h.stack[h.index]
 }
 
+func (h *Manager) Find(search string) string {
+	for _, item := range h.stack {
+		if strings.Contains(item, search) {
+			return item
+		}
+	}
+	return ""
+}
+
+func (h *Manager) Filter(search string) []string {
+	var found []string
+	for _, item := range h.stack {
+		if strings.Contains(item, search) {
+			found = append(found, item)
+		}
+	}
+	return found
+}
+
 func (h *Manager) loadHistoryLines(filePath string) *Manager {
 	f, err := h.fs.Open(filePath)
 	if err != nil {
