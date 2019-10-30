@@ -59,6 +59,5 @@ func (o *outputWriter) Write(p []byte) (n int, err error) {
 		Id:      "output:write", // @todo use Actions
 		Payload: p,
 	})
-	o.em.Dispatch(events.Event{Id: gooster.ActionDraw})
 	return len(p), nil
 }

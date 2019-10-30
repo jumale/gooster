@@ -55,7 +55,6 @@ func (m *Module) handleEventExecCommand(event events.Event) {
 		}
 		m.Log().DebugF("Command finished", command)
 		m.clearCommand()
-		m.AppActions().Draw()
 	}()
 }
 

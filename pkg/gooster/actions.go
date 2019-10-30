@@ -26,10 +26,6 @@ func (a Actions) Exit() {
 	a.ctx.Events().Dispatch(events.Event{Id: ActionExit})
 }
 
-func (a Actions) Draw() {
-	a.ctx.Events().Dispatch(events.Event{Id: ActionDraw})
-}
-
 func (a Actions) SetFocus(view tview.Primitive) {
 	a.ctx.Events().Dispatch(events.Event{Id: ActionSetFocus, Payload: view})
 }
