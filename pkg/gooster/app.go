@@ -19,11 +19,11 @@ type App struct {
 
 func NewApp(cfg AppConfig) (*App, error) {
 	root := tview.NewApplication()
-	if cfg.Debug {
-		root.SetScreen(NewScreenStub(10, 10))
-	}
 
-	ctx, err := newAppContext(cfg, func() { root.Draw() })
+	ctx, err := NewAppContext(AppContextConfig{
+		LogLevel:          cfg.LogLevel,
+		DelayEventManager: true,
+	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "init app context")
 	}
@@ -91,7 +91,11 @@ func (app *App) Run() {
 	}))
 
 	// init services and views
-	app.em.Start()
+	if em, ok := app.Events().(DelayedEventManager); ok {
+		if err := em.Init(); err != nil {
+			panic(errors.WithMessage(err, "init event manager"))
+		}
+	}
 	app.AppActions().AddTab(Tab{Id: initialTabId, View: app.createMainGrid()})
 	app.root.SetRoot(app.pages, true)
 

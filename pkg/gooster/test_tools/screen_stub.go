@@ -1,8 +1,9 @@
-package gooster
+package testtools
 
 import (
 	"fmt"
 	"github.com/gdamore/tcell"
+	"strings"
 	"time"
 )
 
@@ -22,6 +23,18 @@ func NewScreenStub(width, height int) *ScreenStub {
 		height: height,
 		data:   data,
 	}
+}
+
+func (scr *ScreenStub) GetDisplayString() string {
+	var data []string
+	for _, row := range scr.data {
+		data = append(data, string(row))
+	}
+	return strings.Join(data, "\n")
+}
+
+func (scr *ScreenStub) GetDisplay() []byte {
+	return []byte(scr.GetDisplayString())
 }
 
 func (scr *ScreenStub) Init() error {
@@ -114,11 +127,7 @@ func (scr *ScreenStub) Colors() int {
 }
 
 func (scr *ScreenStub) Show() {
-	for _, row := range scr.data {
-		for _, cell := range row {
-			fmt.Print(string(cell))
-		}
-	}
+	fmt.Print(scr.GetDisplayString())
 }
 
 func (scr *ScreenStub) Sync() {

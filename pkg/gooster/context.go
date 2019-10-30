@@ -10,30 +10,40 @@ import (
 	"strings"
 )
 
-type AppContext struct {
-	cfg AppConfig
-	log log.Logger
-	act Actions
-	em  *events.DefaultManager
+type AppContextConfig struct {
+	LogLevel          log.Level
+	DelayEventManager bool
 }
 
-func newAppContext(cfg AppConfig, drawFunc func()) (ctx *AppContext, err error) {
-	hook := &eventHook{draw: drawFunc}
-	em, err := events.NewManager(events.ManagerConfig{
-		DelayedStart: true,
-		BeforeEvent:  hook.beforeEvent,
-		AfterEvent:   hook.afterEvent,
+type AppContext struct {
+	cfg AppContextConfig
+	log log.Logger
+	act Actions
+	em  events.Manager
+}
+
+func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
+	var em events.Manager
+	var logger log.Logger
+
+	em, err = events.NewManager(events.ManagerConfig{
+		DelayedStart: cfg.DelayEventManager,
+		BeforeEvent: func(event events.Event) bool {
+			logEventToOutput(logger, event)
+			return true
+		},
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "init event manager")
 	}
 
+	logger = log.NewSimpleLogger(cfg.LogLevel, &outputWriter{em: em})
+
 	ctx = &AppContext{
 		cfg: cfg,
 		em:  em,
-		log: log.NewSimpleLogger(cfg.LogLevel, &outputWriter{em: em}),
+		log: logger,
 	}
-	hook.log = ctx.log
 	ctx.act = Actions{ctx}
 
 	return ctx, nil
@@ -41,12 +51,55 @@ func newAppContext(cfg AppConfig, drawFunc func()) (ctx *AppContext, err error) 
 
 // ------------------------------------------------------------ //
 
-type eventHook struct {
-	draw func()
-	log  log.Logger
+func (ctx *AppContext) GetConfig(jsonPath string, target interface{}) error {
+	return nil
 }
 
-func (eh *eventHook) beforeEvent(event events.Event) bool {
+func (ctx *AppContext) Log() log.Logger {
+	return ctx.log
+}
+
+func (ctx *AppContext) Events() events.Manager {
+	return ctx.em
+}
+
+func (ctx *AppContext) AppActions() Actions {
+	return ctx.act
+}
+
+func (ctx *AppContext) Close() error {
+	ctx.log.Info("Closing context")
+
+	// substitute logger with an stdout logger,
+	// in case if some modules will try to send logs after everything is closed
+	ctx.log = log.NewSimpleLogger(ctx.cfg.LogLevel, os.Stdout)
+
+	if err := ctx.closeService(ctx.em); err != nil {
+		return errors.WithMessage(err, "closing event manager")
+	}
+
+	return nil
+}
+
+func (ctx *AppContext) closeService(s interface{}) error {
+	if closer, ok := s.(io.Closer); ok {
+		err := closer.Close()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ------------------------------------------------------------ //
+
+type DelayedEventManager interface {
+	Init() error
+}
+
+// ------------------------------------------------------------ //
+
+func logEventToOutput(logger log.Logger, event events.Event) bool {
 	if string(event.Id) != "output:write" {
 		data := ""
 		switch event.Payload.(type) {
@@ -67,50 +120,9 @@ func (eh *eventHook) beforeEvent(event events.Event) bool {
 		if len(msg) > 130 {
 			msg = msg[:130] + "..."
 		}
-		eh.log.Debug(msg)
+		logger.Debug(msg)
 	}
 	return true
-}
-
-func (eh *eventHook) afterEvent(event events.Event) {
-	eh.draw()
-}
-
-// ------------------------------------------------------------ //
-
-func (ctx *AppContext) Config() AppConfig {
-	return ctx.cfg
-}
-
-func (ctx *AppContext) Log() log.Logger {
-	return ctx.log
-}
-
-func (ctx *AppContext) Events() events.Manager {
-	return ctx.em
-}
-
-func (ctx *AppContext) AppActions() Actions {
-	return ctx.act
-}
-
-func (ctx *AppContext) Output() io.Writer {
-	return &outputWriter{em: ctx.em}
-}
-
-func (ctx *AppContext) Close() error {
-	ctx.log.Info("Closing context")
-
-	// substitute logger with an stdout logger,
-	// in case if some modules will try to send logs after everything is closed
-	ctx.log = log.NewSimpleLogger(ctx.cfg.LogLevel, os.Stdout)
-
-	err := ctx.em.Close()
-	if err != nil {
-		return errors.WithMessage(err, "closing event manager")
-	}
-
-	return nil
 }
 
 // ------------------------------------------------------------ //
