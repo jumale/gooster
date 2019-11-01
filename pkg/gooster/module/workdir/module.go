@@ -27,20 +27,19 @@ type Module struct {
 	workDir string
 	tree    *dirtree.DirTree
 	view    *tview.TreeView
-	actions Actions
 	fs      filesys.FileSys
 }
 
 func (m *Module) Init(ctx *gooster.AppContext) error {
-	m.actions = Actions{ctx}
-
 	m.tree = dirtree.New(dirtree.Config{
 		Colors: dirtree.ColorsConfig{
 			Root:   m.cfg.Colors.Graphics,
 			Folder: m.cfg.Colors.Folder,
 			File:   m.cfg.Colors.File,
 		},
-		SetChildren: m.actions.SetChildren,
+		SetChildren: func(target *tview.TreeNode, children []*dirtree.Node) {
+			m.Events().Dispatch(EventSetChildren{Target: target, Children: children})
+		},
 	})
 
 	m.view = tview.NewTreeView()
@@ -61,17 +60,30 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 
 	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, m.view, m.view.Box)
 
-	m.Events().Subscribe(
-		events.Subscriber{Id: ActionRefresh, Fn: m.handleRefreshEvent},
-		events.Subscriber{Id: ActionChangeDir, Fn: m.handleChangeDirEvent},
-		events.Subscriber{Id: ActionSetChildren, Fn: m.handleSetChildrenEvent},
-		events.Subscriber{Id: ActionActivateNode, Fn: m.handleActivateNodeEvent},
-		events.Subscriber{Id: ActionCreateFile, Fn: m.handleCreateFileEvent},
-		events.Subscriber{Id: ActionCreateDir, Fn: m.handleCreateDirEvent},
-		events.Subscriber{Id: ActionViewFile, Fn: m.handleViewFileEvent},
-		events.Subscriber{Id: ActionDelete, Fn: m.handleDeleteEvent},
-		events.Subscriber{Id: ActionOpen, Fn: m.handleOpenEvent},
-	)
+	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case EventRefresh:
+			m.handleEventRefresh()
+		case EventChangeDir:
+			m.handleEventChangeDir(event)
+		case EventSetChildren:
+			m.handleEventSetChildren(event)
+		case EventActivateNode:
+			m.handleEventActivateNode(event)
+		case EventCreateFile:
+			m.handleEventCreateFile(event)
+		case EventCreateDir:
+			m.handleEventCreateDir(event)
+		case EventViewFile:
+			m.handleEventViewFile(event)
+		case EventDelete:
+			m.handleEventDelete(event)
+		case EventOpen:
+			m.handleEventOpen(event)
+		}
+		return e
+	}))
+
 	m.HandleKeyEvents(gooster.KeyEventHandlers{
 		m.cfg.Keys.NewFile: m.handleKeyNewFile,
 		m.cfg.Keys.NewDir:  m.handleKeyNewDir,
@@ -80,8 +92,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		m.cfg.Keys.Open:    m.handleKeyOpen,
 	})
 
-	m.actions.ChangeDir(m.cfg.InitDir)
-
+	m.Events().Dispatch(EventChangeDir{Path: m.cfg.InitDir})
 	return nil
 }
 

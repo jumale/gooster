@@ -31,11 +31,13 @@ func TestableModule(m gooster.Module) *ModuleTester {
 		screen:     NewScreenStub(10, 10),
 	}
 
-	ctx.Events().Subscribe(events.Subscriber{
-		Id:    "app:draw",
-		Fn:    func(event events.Event) { tester.draw() },
-		Order: -9999,
-	})
+	ctx.Events().Subscribe(events.HandleWithPrio(-1000000, func(e events.IEvent) events.IEvent {
+		switch e.(type) {
+		case gooster.EventDraw:
+			tester.draw()
+		}
+		return e
+	}))
 
 	return tester
 }
@@ -56,7 +58,7 @@ func (t *ModuleTester) PressKey(key tcell.Key) *ModuleTester {
 	return t
 }
 
-func (t *ModuleTester) SendEvent(id events.EventId, payload ...events.EventPayload) *ModuleTester {
+func (t *ModuleTester) SendEvent(event events.IEvent) *ModuleTester {
 	return t
 }
 

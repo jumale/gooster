@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"io"
 	"os"
-	"strings"
 )
 
 type AppContextConfig struct {
@@ -18,33 +17,40 @@ type AppContextConfig struct {
 type AppContext struct {
 	cfg AppContextConfig
 	log log.Logger
-	act Actions
 	em  events.Manager
+	out *output
 }
 
 func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
 	var em events.Manager
 	var logger log.Logger
 
-	em, err = events.NewManager(events.ManagerConfig{
-		DelayedStart: cfg.DelayEventManager,
-		BeforeEvent: func(event events.Event) bool {
-			logEventToOutput(logger, event)
-			return true
-		},
-	})
+	em, err = events.NewManager(events.ManagerConfig{DelayedStart: cfg.DelayEventManager})
 	if err != nil {
 		return nil, errors.WithMessage(err, "init event manager")
 	}
 
-	logger = log.NewSimpleLogger(cfg.LogLevel, &outputWriter{em: em})
+	em.Subscribe(events.HandleWithPrio(-1000000, func(event events.IEvent) events.IEvent {
+		logEventToOutput(logger, event)
+
+		if drawable, ok := event.(DrawableEvent); ok {
+			if drawable.NeedsDraw() {
+				em.Dispatch(EventDraw{})
+			}
+		}
+
+		return event
+	}))
+
+	output := &output{em}
+	logger = log.NewSimpleLogger(cfg.LogLevel, output)
 
 	ctx = &AppContext{
 		cfg: cfg,
 		em:  em,
 		log: logger,
+		out: output,
 	}
-	ctx.act = Actions{ctx}
 
 	return ctx, nil
 }
@@ -63,8 +69,8 @@ func (ctx *AppContext) Events() events.Manager {
 	return ctx.em
 }
 
-func (ctx *AppContext) AppActions() Actions {
-	return ctx.act
+func (ctx *AppContext) Output() *output {
+	return ctx.out
 }
 
 func (ctx *AppContext) Close() error {
@@ -99,42 +105,17 @@ type DelayedEventManager interface {
 
 // ------------------------------------------------------------ //
 
-func logEventToOutput(logger log.Logger, event events.Event) bool {
-	if string(event.Id) != "output:write" {
-		data := ""
-		switch event.Payload.(type) {
-		case bool, string, int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
-			data = fmt.Sprintf(" %v", event.Payload)
-		default:
-			dataType := fmt.Sprintf("%T", event.Payload)
-			if strings.Contains(dataType, ".Payload") {
-				data = fmt.Sprintf(" %+v", event.Payload)
-			} else {
-				data = " " + dataType
-			}
-		}
-		if event.Payload == nil {
-			data = ""
-		}
-		msg := fmt.Sprintf("[gold]Event:[-] [lightseagreen]%s[-]%s", event.Id, data)
+func logEventToOutput(logger log.Logger, event events.IEvent) {
+	switch event.(type) {
+	case EventOutput:
+		return
+	case EventDraw:
+		return
+	default:
+		msg := fmt.Sprintf("[gold]Event:[-] [lightseagreen]%T[-]%+v", event, event)
 		if len(msg) > 130 {
 			msg = msg[:130] + "..."
 		}
 		logger.Debug(msg)
 	}
-	return true
-}
-
-// ------------------------------------------------------------ //
-
-type outputWriter struct {
-	em events.Manager
-}
-
-func (o *outputWriter) Write(p []byte) (n int, err error) {
-	o.em.Dispatch(events.Event{
-		Id:      "output:write", // @todo use Actions
-		Payload: p,
-	})
-	return len(p), nil
 }

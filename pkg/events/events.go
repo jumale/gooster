@@ -1,34 +1,46 @@
 package events
 
-type EventId string
-type EventPayload interface{}
-type Event struct {
-	Id      EventId
-	Payload EventPayload
-}
+// EventHandler performs some action when an event is dispatched.
+// It must return a new (or the same event).
+// The returned event will be passed to the next subscribers,
+// this feature can be used to extend events.
+// By returning nil you stop the propagation, so the next
+// subscribers will not be called for this event.
+type EventHandler func(event IEvent) IEvent
 
-func (e Event) formattedData() string {
-	return truncateString(toString(e.Payload), 80)
-}
+type IEvent interface{}
 
 type Manager interface {
-	Dispatch(Event)
-	Subscribe(...Subscriber)
-	Extend(...Extension)
+	Dispatch(IEvent)
+	Subscribe(ISubscriber)
 }
 
-type EventHandler func(Event)
-
-type Subscriber struct {
-	Id    EventId
-	Fn    EventHandler
-	Order float64 // higher value == earlier called
+type ISubscriber interface {
+	Handler() EventHandler
+	Priority() float64 // higher value == earlier called
 }
 
-type PayloadHandler func(data EventPayload) (newData EventPayload)
+func HandleFunc(fn EventHandler) ISubscriber {
+	return subscriber{handler: fn}
+}
 
-type Extension struct {
-	Id    EventId
-	Fn    PayloadHandler
-	Order float64 // higher value == earlier called
+func HandleWithPrio(prio float64, fn EventHandler) ISubscriber {
+	return subscriber{handler: fn, prio: prio}
+}
+
+type subscriber struct {
+	handler EventHandler
+	prio    float64
+}
+
+func (s subscriber) Handler() EventHandler {
+	return s.handler
+}
+
+func (s subscriber) Priority() float64 {
+	return s.prio
+}
+
+type GenericEvent struct {
+	ID string
 }

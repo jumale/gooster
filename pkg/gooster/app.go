@@ -72,16 +72,32 @@ func (app *App) RegisterModule(mod Module, extensions ...Extension) {
 
 func (app *App) Run() {
 	// init event handlers
-	app.Events().Subscribe(
-		events.Subscriber{Id: ActionExit, Fn: app.handleExitEvent, Order: -9999}, // as late as possible
-		events.Subscriber{Id: ActionSetFocus, Fn: app.handleSetFocusEvent},
-		events.Subscriber{Id: ActionDraw, Fn: app.handleDrawEvent},
-		events.Subscriber{Id: ActionOpenDialog, Fn: app.handleEventOpenDialog},
-		events.Subscriber{Id: ActionCloseDialog, Fn: app.handleEventCloseDialog},
-		events.Subscriber{Id: ActionAddTab, Fn: app.handleEventAddTab},
-		events.Subscriber{Id: ActionShowTab, Fn: app.handleEventShowTab},
-		events.Subscriber{Id: ActionRemoveTab, Fn: app.handleEventRemoveTab},
-	)
+	app.Events().Subscribe(events.HandleWithPrio(-9999, func(e events.IEvent) events.IEvent {
+		switch e.(type) {
+		case EventExit:
+			app.handleExitEvent()
+		}
+		return e
+	}))
+	app.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case EventSetFocus:
+			app.handleSetFocusEvent(event)
+		case EventDraw:
+			app.handleDrawEvent()
+		case EventOpenDialog:
+			app.handleEventOpenDialog(event)
+		case EventCloseDialog:
+			app.handleEventCloseDialog()
+		case EventAddTab:
+			app.handleEventAddTab(event)
+		case EventShowTab:
+			app.handleEventShowTab(event)
+		case EventRemoveTab:
+			app.handleEventRemoveTab(event)
+		}
+		return e
+	}))
 
 	// init key handlers
 	handleKeyEvents(&appInputAdaptor{app.root}, app.withFocusKeys(KeyEventHandlers{
@@ -96,7 +112,7 @@ func (app *App) Run() {
 			panic(errors.WithMessage(err, "init event manager"))
 		}
 	}
-	app.AppActions().AddTab(Tab{Id: initialTabId, View: app.createMainGrid()})
+	app.Events().Dispatch(EventAddTab{Id: initialTabId, View: app.createMainGrid()})
 	app.root.SetRoot(app.pages, true)
 
 	// start the app
@@ -130,7 +146,7 @@ func (app *App) withFocusKeys(keyHandlers KeyEventHandlers) KeyEventHandlers {
 	for focusKey, view := range app.focusMap {
 		v := view
 		keyHandlers[focusKey] = func(event *tcell.EventKey) *tcell.EventKey {
-			app.AppActions().SetFocus(v)
+			app.Events().Dispatch(EventSetFocus{Target: v})
 			return nil
 		}
 	}

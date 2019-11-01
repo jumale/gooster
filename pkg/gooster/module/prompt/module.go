@@ -16,8 +16,6 @@ type Module struct {
 	fs      filesys.FileSys
 	view    *tview.InputField
 	history *history.Manager
-	actions Actions
-	helper  helper.Actions
 	cmd     *Command
 }
 
@@ -32,8 +30,6 @@ func newModule(cfg Config, fs filesys.FileSys) *Module {
 func (m *Module) Init(ctx *gooster.AppContext) error {
 	m.view = tview.NewInputField()
 	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, m.view, m.view.Box)
-	m.actions = Actions{ctx}
-	m.helper = helper.Actions{AppContext: ctx}
 
 	m.history = history.NewManager(history.Config{
 		HistoryFile: m.cfg.HistoryFile,
@@ -47,13 +43,22 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	m.view.SetFieldBackgroundColor(m.cfg.Colors.Bg)
 	m.view.SetFieldTextColor(m.cfg.Colors.Text)
 
-	m.Events().Subscribe(
-		events.Subscriber{Id: ActionSetPrompt, Fn: m.handleEventSetPrompt},
-		events.Subscriber{Id: ActionClearPrompt, Fn: m.handleEventClearPrompt},
-		events.Subscriber{Id: ActionExecCommand, Fn: m.handleEventExecCommand},
-		events.Subscriber{Id: ActionInterruptCommand, Fn: m.handleInterruptCommand},
-		events.Subscriber{Id: ActionSendUserInput, Fn: m.handleSendUserInput},
-	)
+	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case EventSetPrompt:
+			m.handleEventSetPrompt(event)
+		case EventClearPrompt:
+			m.handleEventClearPrompt()
+		case EventExecCommand:
+			m.handleEventExecCommand(event)
+		case EventSendUserInput:
+			m.handleEventSendUserInput(event)
+		case gooster.EventInterrupt:
+			m.handleEventInterruptCommand()
+		}
+		return e
+	}))
+
 	m.HandleKeyEvents(gooster.KeyEventHandlers{
 		m.cfg.Keys.HistoryPrev: m.handleKeyHistoryPrev,
 		m.cfg.Keys.HistoryNext: m.handleKeyHistoryNext,
@@ -70,13 +75,13 @@ func (m *Module) submit(key tcell.Key) {
 	}
 	switch key {
 	case tcell.KeyTab:
-		m.helper.SetCompletion(input, nil)
+		m.Events().Dispatch(helper.EventSetCompletion{Input: input})
 
 	case tcell.KeyEnter:
 		if m.cmd == nil {
-			m.actions.ExecCommand(input)
+			m.Events().Dispatch(EventExecCommand{Cmd: input})
 		} else {
-			m.actions.SendUserInput(input)
+			m.Events().Dispatch(EventSendUserInput{Input: input})
 		}
 	}
 }

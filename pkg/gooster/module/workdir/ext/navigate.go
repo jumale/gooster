@@ -3,6 +3,7 @@ package ext
 import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/dirtree"
+	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	"strings"
@@ -20,7 +21,6 @@ type TypingSearch struct {
 	children []*dirtree.Node
 	timer    *time.Timer
 	cfg      TypingSearchConfig
-	workDir  workdir.Actions
 	sync.Mutex
 	*gooster.AppContext
 }
@@ -35,14 +35,16 @@ func (ext *TypingSearch) Config() gooster.ExtensionConfig {
 
 func (ext *TypingSearch) Init(m gooster.Module, ctx *gooster.AppContext) error {
 	ext.AppContext = ctx
-	ext.workDir = workdir.Actions{AppContext: ctx}
 
-	ext.workDir.ExtendSetChildren(func(nodes []*dirtree.Node) []*dirtree.Node {
-		ext.Lock()
-		ext.children = nodes
-		ext.Unlock()
-		return nodes
-	})
+	ext.Events().Subscribe(events.HandleWithPrio(-100, func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case workdir.EventSetChildren:
+			ext.Lock()
+			ext.children = event.Children
+			ext.Unlock()
+		}
+		return e
+	}))
 
 	prev := m.GetInputCapture()
 	m.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -82,7 +84,7 @@ func (ext *TypingSearch) focusNode(nodes []*dirtree.Node, search string) {
 	//ext.log.DebugF("focus node `%s`", search)
 	for _, child := range nodes {
 		if strings.Contains(strings.ToLower(child.GetText()), search) {
-			ext.workDir.ActivateNode(child.Path)
+			ext.Events().Dispatch(workdir.EventActivateNode{Path: child.Path})
 			return
 		}
 	}

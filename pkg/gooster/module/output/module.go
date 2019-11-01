@@ -3,7 +3,6 @@ package output
 import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/ansi"
-	"github.com/jumale/gooster/pkg/convert"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/pkg/errors"
@@ -45,12 +44,15 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	view.SetBackgroundColor(m.cfg.Colors.Bg)
 	view.SetTextColor(m.cfg.Colors.Text)
 
-	m.Events().Subscribe(
-		events.Subscriber{Id: ActionWrite, Fn: func(event events.Event) {
-			if _, err := output.Write(convert.ToBytes(event.Payload)); err != nil {
+	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case gooster.EventOutput:
+			if _, err := output.Write(event.Data); err != nil {
 				m.Log().Error(errors.WithMessage(err, "write to output"))
 			}
-		}},
-	)
+		}
+		return e
+	}))
+
 	return nil
 }

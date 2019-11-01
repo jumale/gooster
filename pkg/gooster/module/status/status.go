@@ -4,11 +4,8 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
-	"github.com/pkg/errors"
+	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	"github.com/rivo/tview"
-	"os/user"
-	"path/filepath"
-	"strings"
 )
 
 type Config struct {
@@ -30,6 +27,7 @@ func NewModule(cfg Config) *Module {
 type Module struct {
 	*gooster.BaseModule
 	cfg Config
+	wd  *tview.TableCell
 }
 
 func (m *Module) Init(ctx *gooster.AppContext) error {
@@ -44,26 +42,8 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	wd.SetTextColor(m.cfg.Colors.WorkDir)
 	wd.SetExpansion(2)
 	wd.SetAlign(tview.AlignLeft)
-
 	view.SetCell(0, 0, wd)
-
-	m.Events().Subscribe(
-		events.Subscriber{Id: "workdir:change_dir", Fn: func(event events.Event) { // @todo use Actions
-			path, err := filepath.Abs(event.Payload.(string))
-			if err != nil {
-				m.Log().Error(errors.WithMessage(err, "could not obtain working directory"))
-			} else {
-				usr, err := user.Current()
-				if err != nil {
-					m.Log().Error(errors.WithMessage(err, "could not obtain user directory"))
-				} else {
-					path = strings.Replace(path, usr.HomeDir, "~", 1)
-				}
-
-				wd.SetText(path)
-			}
-		}},
-	)
+	m.wd = wd
 
 	branch := tview.NewTableCell("master")
 	branch.SetTextColor(m.cfg.Colors.Branch)
@@ -76,6 +56,14 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	k8sCtx.SetExpansion(2)
 	k8sCtx.SetAlign(tview.AlignRight)
 	view.SetCell(0, 2, k8sCtx)
+
+	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case workdir.EventChangeDir:
+			m.handleEventChangeDir(event)
+		}
+		return e
+	}))
 
 	return nil
 }

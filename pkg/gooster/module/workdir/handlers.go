@@ -6,93 +6,81 @@ import (
 	"github.com/jumale/gooster/pkg/convert"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/dirtree"
-	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/pkg/errors"
 	"github.com/rivo/tview"
 	"path/filepath"
 	"strings"
 )
 
-func (m *Module) handleRefreshEvent(event events.Event) {
+func (m *Module) handleEventRefresh() {
 	m.Log().Check(m.tree.Refresh(m.workDir))
 }
 
-func (m *Module) handleChangeDirEvent(event events.Event) {
-	m.workDir = convert.ToString(event.Payload)
+func (m *Module) handleEventChangeDir(event EventChangeDir) {
+	m.workDir = event.Path
 	if err := m.fs.Chdir(m.workDir); err != nil {
 		m.Log().Error(errors.WithMessage(err, "change work dir"))
 		return
 	}
-	m.actions.Refresh()
+	m.handleEventRefresh()
 }
 
-func (m *Module) handleSetChildrenEvent(event events.Event) {
-	payload := event.Payload.(PayloadSetChildren)
+func (m *Module) handleEventSetChildren(event EventSetChildren) {
 	var list []*tview.TreeNode
-	for _, child := range payload.Children {
+	for _, child := range event.Children {
 		list = append(list, child.TreeNode)
 	}
-	payload.Target.SetChildren(list)
+	event.Target.SetChildren(list)
 }
 
-func (m *Module) handleActivateNodeEvent(event events.Event) {
-	payload, ok := event.Payload.(PayloadActivateNode)
-	if !ok {
-		m.Log().ErrorF(
-			"workdir.Actions.Activate*Node events expect workdir.PayloadActivateNode as payload. Found %T",
-			event.Payload,
-		)
-		return
-	}
-
-	node := m.tree.Find(payload.Path, payload.Mode)
+func (m *Module) handleEventActivateNode(event EventActivateNode) {
+	node := m.tree.Find(event.Path, event.Mode)
 	if node == nil {
-		m.Log().ErrorF("Can not activate node `%s`. Not found.", payload.Path)
+		m.Log().ErrorF("Can not activate node `%s`. Not found.", event.Path)
 	} else {
 		m.view.SetCurrentNode(node.TreeNode)
 	}
 }
 
-func (m *Module) handleCreateFileEvent(event events.Event) {
-	name := convert.ToString(event.Payload)
-	parts := filepath.SplitList(name)
+func (m *Module) handleEventCreateFile(event EventCreateFile) {
+	parts := filepath.SplitList(event.Name)
 	if len(parts) > 0 {
-		dir := filepath.Dir(name)
+		dir := filepath.Dir(event.Name)
 		err := m.fs.MkdirAll(dir, 0755)
 		if err != nil {
 			m.Log().Error(errors.WithMessage(err, "creating directory"))
 		}
 	}
 
-	emptyFile, err := m.fs.Create(name)
+	emptyFile, err := m.fs.Create(event.Name)
 	if err != nil {
 		m.Log().Error(err)
 	} else if err = emptyFile.Close(); err != nil {
 		m.Log().Error(errors.WithMessage(err, "creating file"))
 	} else {
-		m.actions.Refresh() // @todo possible race conditions
-		m.actions.ActivateNode(name)
+		m.handleEventRefresh()
+		m.handleEventActivateNode(EventActivateNode{Path: event.Name})
 	}
 }
 
-func (m *Module) handleCreateDirEvent(event events.Event) {
-	dirPath := convert.ToString(event.Payload)
-	err := m.fs.MkdirAll(dirPath, 0755)
+func (m *Module) handleEventCreateDir(event EventCreateDir) {
+	err := m.fs.MkdirAll(event.DirPath, 0755)
 	if err != nil {
 		m.Log().Error(errors.WithMessage(err, "creating directory"))
 	} else {
-		m.actions.Refresh() // @todo possible race conditions
-		m.actions.ActivateNode(dirPath)
+		m.handleEventRefresh()
+		m.handleEventActivateNode(EventActivateNode{Path: event.DirPath})
 	}
 }
 
-func (m *Module) handleViewFileEvent(event events.Event) {
-	path := convert.ToString(event.Payload)
+func (m *Module) handleEventViewFile(event EventViewFile) {
+	path := convert.ToString(event.Path)
 	m.Log().DebugF("viewing file '%s'", path)
 }
 
-func (m *Module) handleDeleteEvent(event events.Event) {
-	path := convert.ToString(event.Payload)
+func (m *Module) handleEventDelete(event EventDelete) {
+	path := convert.ToString(event.Path)
 
 	nextNode := m.tree.Find(path, dirtree.FindNext)
 	if nextNode == nil {
@@ -104,68 +92,66 @@ func (m *Module) handleDeleteEvent(event events.Event) {
 		return
 	}
 
-	m.actions.Refresh() // @todo possible race conditions
+	m.handleEventRefresh()
 	if nextNode != nil {
-		m.actions.ActivateNode(nextNode.Path)
+		m.handleEventActivateNode(EventActivateNode{Path: nextNode.Path})
 	}
 }
 
-func (m *Module) handleOpenEvent(event events.Event) {
-	path := convert.ToString(event.Payload)
-
-	info, err := m.fs.Stat(path)
+func (m *Module) handleEventOpen(event EventOpen) {
+	info, err := m.fs.Stat(event.Path)
 	if err != nil {
-		m.Log().ErrorF("Could not open path %s: %s", path, err)
+		m.Log().ErrorF("Could not open path %s: %s", event.Path, err)
 		return
 	}
 
 	if info.IsDir() {
-		m.actions.ChangeDir(path)
+		m.Events().Dispatch(EventChangeDir{Path: event.Path})
 	} else {
-		m.Log().DebugF("editing file '%s'", path)
+		m.Log().DebugF("editing file '%s'", event.Path)
 	}
 }
 
 func (m *Module) handleKeyNewFile(event *tcell.EventKey) *tcell.EventKey {
-	m.AppActions().OpenDialog(dialog.Input{
+	m.Events().Dispatch(gooster.EventOpenDialog{Dialog: dialog.Input{
 		Title: "New file",
 		Label: "File Name",
-		OnOk:  m.actions.CreateFile,
+		OnOk:  func(val string) { m.Events().Dispatch(EventCreateFile{Name: val}) },
 		Log:   m.Log(),
-	})
+	}})
 	return event
 }
 
 func (m *Module) handleKeyNewDir(event *tcell.EventKey) *tcell.EventKey {
-	m.AppActions().OpenDialog(dialog.Input{
+	m.Events().Dispatch(gooster.EventOpenDialog{Dialog: dialog.Input{
 		Title: "New dir",
 		Label: "Dir Name",
-		OnOk:  m.actions.CreateDir,
+		OnOk:  func(val string) { m.Events().Dispatch(EventCreateDir{DirPath: val}) },
 		Log:   m.Log(),
-	})
+	}})
 	return event
 }
 
 func (m *Module) handleKeyViewFile(event *tcell.EventKey) *tcell.EventKey {
-	m.actions.ViewFile(m.currentNode().Path)
+	m.Events().Dispatch(EventViewFile{Path: m.currentNode().Path})
 	return event
 }
 
 func (m *Module) handleKeyDelete(event *tcell.EventKey) *tcell.EventKey {
 	node := m.currentNode()
-	m.AppActions().OpenDialog(dialog.Confirm{
+	m.Events().Dispatch(gooster.EventOpenDialog{Dialog: dialog.Confirm{
 		Title: fmt.Sprintf("Delete %s?", node.Type()),
 		Text:  m.formatPath(node.Path, 40),
 		OnOk: func(form *tview.Form) {
-			m.actions.Delete(node.Path)
+			m.Events().Dispatch(EventDelete{Path: node.Path})
 		},
 		Log: m.Log(),
-	})
+	}})
 	return event
 }
 
 func (m *Module) handleKeyOpen(event *tcell.EventKey) *tcell.EventKey {
-	m.actions.Open(m.currentNode().Path)
+	m.Events().Dispatch(EventOpen{Path: m.currentNode().Path})
 	return event
 }
 

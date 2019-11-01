@@ -7,9 +7,14 @@ import (
 )
 
 const (
-	EventBird EventId = "bird"
-	EventFish         = "fish"
+	EventBird string = "bird"
+	EventFish        = "fish"
 )
+
+type Event struct {
+	Id      string
+	Payload string
+}
 
 func TestConstructor(t *testing.T) {
 	assert := _assert.New(t)
@@ -111,12 +116,13 @@ func TestExtendEvents(t *testing.T) {
 		assert.NoError(err)
 
 		handled := &handler{}
-		mng.Subscribe(handled.withName(EventBird, "bob"))
-		mng.Subscribe(handled.withName(EventFish, "eric"))
 
-		mng.Extend(extension.withName(EventBird, "bird_ext1"))
-		mng.Extend(extension.withName(EventBird, "bird_ext2"))
-		mng.Extend(extension.withName(EventFish, "fish_ext1"))
+		mng.Subscribe(extension.withName(EventBird, "bird_ext1"))
+		mng.Subscribe(extension.withName(EventBird, "bird_ext2"))
+		mng.Subscribe(handled.withName(EventBird, "bob"))
+
+		mng.Subscribe(extension.withName(EventFish, "fish_ext1"))
+		mng.Subscribe(handled.withName(EventFish, "eric"))
 
 		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 		mng.Dispatch(Event{Id: EventFish, Payload: "tuna"})
@@ -133,9 +139,9 @@ func TestExtendEvents(t *testing.T) {
 		handled := &handler{}
 		mng.Subscribe(handled.withName(EventBird, "bob"))
 
-		mng.Extend(extension.withNameAndPriority(EventBird, "ext1", -10))
-		mng.Extend(extension.withNameAndPriority(EventBird, "ext2", 9999))
-		mng.Extend(extension.withNameAndPriority(EventBird, "ext3", 0))
+		mng.Subscribe(extension.withNameAndPriority(EventBird, "ext1", 99))
+		mng.Subscribe(extension.withNameAndPriority(EventBird, "ext2", 9999))
+		mng.Subscribe(extension.withNameAndPriority(EventBird, "ext3", 999))
 
 		mng.Dispatch(Event{Id: EventBird, Payload: "eagle"})
 
@@ -179,7 +185,8 @@ func TestDelayedStart(t *testing.T) {
 		mng.Subscribe(handled.withName(EventBird, "john"))
 
 		// now all events should be handled by all subscribers
-		mng.Start()
+		err = mng.Init()
+		assert.NoError(err)
 
 		assert.Len(handled.events, 2)
 		assert.Equal("'bob' handled 'bird/eagle'", handled.events[0])
@@ -191,17 +198,23 @@ type handler struct {
 	events []string
 }
 
-func (h *handler) withName(id EventId, name string) Subscriber {
+func (h *handler) withName(id string, name string) subscriber {
 	return h.withNameAndPriority(id, name, 0)
 }
 
-func (h *handler) withNameAndPriority(id EventId, name string, order float64) Subscriber {
-	return Subscriber{
-		Id:    id,
-		Order: order,
-		Fn: func(event Event) {
-			e := fmt.Sprintf("'%s' handled '%s/%s'", name, event.Id, event.Payload)
-			h.events = append(h.events, e)
+func (h *handler) withNameAndPriority(id string, name string, order float64) subscriber {
+	return subscriber{
+		prio: order,
+		handler: func(event IEvent) IEvent {
+			switch e := event.(type) {
+			case Event:
+				if e.Id == id {
+					oEvent := event.(Event)
+					e := fmt.Sprintf("'%s' handled '%s/%s'", name, oEvent.Id, oEvent.Payload)
+					h.events = append(h.events, e)
+				}
+			}
+			return event
 		},
 	}
 }
@@ -210,16 +223,24 @@ type _ext struct{}
 
 var extension = _ext{}
 
-func (e _ext) withName(id EventId, name string) Extension {
+func (e _ext) withName(id string, name string) subscriber {
 	return e.withNameAndPriority(id, name, 0)
 }
 
-func (_ext) withNameAndPriority(id EventId, name string, order float64) Extension {
-	return Extension{
-		Id:    id,
-		Order: order,
-		Fn: func(data EventPayload) (newData EventPayload) {
-			return fmt.Sprintf("%s/%s", name, data)
+func (_ext) withNameAndPriority(id string, name string, order float64) subscriber {
+	return subscriber{
+		prio: order,
+		handler: func(originalEvent IEvent) (updatedEvent IEvent) {
+			switch e := originalEvent.(type) {
+			case Event:
+				if e.Id == id {
+					return Event{
+						Id:      e.Id,
+						Payload: fmt.Sprintf("%s/%s", name, originalEvent.(Event).Payload),
+					}
+				}
+			}
+			return originalEvent
 		},
 	}
 }

@@ -65,7 +65,12 @@ func (m *Module) clearCommand() {
 	m.cmd = nil
 	if m.cfg.PrintDivider {
 		_, _, width, _ := m.view.GetInnerRect()
-		m.actions.writeOutputF("%s[%s]%s[-]\n", lineBreak, getColorName(m.cfg.Colors.Divider), strings.Repeat("-", width-2))
+		m.Output().WriteF(
+			"%s[%s]%s[-]\n",
+			lineBreak,
+			getColorName(m.cfg.Colors.Divider),
+			strings.Repeat("-", width-2),
+		)
 	}
 }
 

@@ -2,6 +2,7 @@ package ext
 
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
+	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	"path"
@@ -34,7 +35,16 @@ func (ext *SortTree) Config() gooster.ExtensionConfig {
 }
 
 func (ext *SortTree) Init(m gooster.Module, ctx *gooster.AppContext) error {
-	workdir.Actions{AppContext: ctx}.ExtendSetChildren(ext.sort)
+	ctx.Events().Subscribe(events.HandleWithPrio(100, func(e events.IEvent) events.IEvent {
+		switch event := e.(type) {
+		case workdir.EventSetChildren:
+			return workdir.EventSetChildren{
+				Target:   event.Target,
+				Children: ext.sort(event.Children),
+			}
+		}
+		return e
+	}))
 	return nil
 }
 
