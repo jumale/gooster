@@ -60,7 +60,7 @@ func TestableModule(t *testing.T, m gooster.Module) *ModuleTester {
 type ModuleTester struct {
 	*gooster.AppContext
 	module gooster.Module
-	screen *ScreenStub
+	screen *screenStub
 	output *bytes.Buffer
 	logs   *bytes.Buffer
 	assert *assert.Assertions
@@ -166,32 +166,9 @@ func diff(expected, actual string) string {
 }
 
 func (t *ModuleTester) View() string {
-	var data []string
-	for _, row := range t.screen.data {
-		data = append(data, string(row))
-	}
-	return strings.Join(data, "\n")
-}
-
-func (t *ModuleTester) TrimView() string {
-	return strings.Trim(t.View(), " ")
+	return t.screen.GetView()
 }
 
 func (t *ModuleTester) draw() {
 	t.module.Draw(t.screen)
 }
-
-/*
-														Not equal:
-            	            	expected: "First name: John\nLast name: Does\nHello John Doe!"
-            	            	actual  : "First name: John\nLast name: Doe\nHello John Doe!"
-
-            	            	Diff:
-            	            	--- Expected
-            	            	+++ Actual
-            	            	@@ -1,3 +1,3 @@
-            	            	 First name: John
-            	            	-Last name: Does
-            	            	+Last name: Doe
-            	            	 Hello John Doe!
-*/

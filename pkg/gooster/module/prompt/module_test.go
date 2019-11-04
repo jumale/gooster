@@ -12,10 +12,18 @@ import (
 func TestModule(t *testing.T) {
 	promptLabel := ">> "
 	withLabel := func(v string) string { return promptLabel + v }
+	colors := ColorsConfig{
+		Bg:      tcell.ColorDefault,
+		Label:   tcell.ColorDefault,
+		Text:    tcell.ColorDefault,
+		Divider: tcell.ColorDefault,
+		Command: tcell.ColorDefault,
+	}
 
 	cfg := Config{
 		Label:      promptLabel,
-		FieldWidth: 10,
+		FieldWidth: 0,
+		Colors:     colors,
 	}
 	fsProps := fstub.Config{
 		WorkDir: "/wd",
@@ -42,7 +50,10 @@ func TestModule(t *testing.T) {
 	})
 
 	t.Run("should use a default label if not configured (or empty)", func(t *testing.T) {
-		cfg := Config{Label: ""}
+		cfg := Config{
+			Label:  "",
+			Colors: colors,
+		}
 		module := init(t, cfg, fs)
 
 		module.Draw()
@@ -94,6 +105,7 @@ func TestModule(t *testing.T) {
 	t.Run("should navigate history", func(t *testing.T) {
 		cfg := Config{
 			Label:       promptLabel,
+			Colors:      colors,
 			FieldWidth:  10,
 			HistoryFile: "/history",
 			Keys: KeysConfig{
@@ -123,5 +135,22 @@ func TestModule(t *testing.T) {
 
 		module.PressKey(cfg.Keys.HistoryNext)
 		module.AssertView(promptLabel)
+	})
+
+	t.Run("should use configured colors", func(t *testing.T) {
+		cfg := Config{
+			Label:      promptLabel,
+			FieldWidth: 10,
+			Colors: ColorsConfig{
+				Bg:    tcell.ColorRed,
+				Label: tcell.ColorGreen,
+				Text:  tcell.ColorBlue,
+			},
+		}
+
+		module := init(t, cfg, fs)
+
+		module.SendEvent(EventSetPrompt{Input: "foo bar"})
+		module.AssertView("[green:red]>> [blue]foo bar")
 	})
 }
