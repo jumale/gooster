@@ -12,6 +12,7 @@ import (
 type Config struct {
 	HistoryFile string
 	Log         log.Logger
+	FileSys     filesys.FileSys
 }
 
 type Manager struct {
@@ -24,15 +25,15 @@ type Manager struct {
 }
 
 func NewManager(cfg Config) *Manager {
-	return newManager(cfg, filesys.Default{})
-}
+	if cfg.FileSys == nil {
+		cfg.FileSys = filesys.Default{}
+	}
 
-func newManager(cfg Config, fs filesys.FileSys) *Manager {
 	mng := &Manager{
 		index: -1,
 		set:   make(map[string]struct{}),
 		log:   log.EmptyLogger{},
-		fs:    fs,
+		fs:    cfg.FileSys,
 	}
 	if cfg.Log != nil {
 		mng.log = cfg.Log

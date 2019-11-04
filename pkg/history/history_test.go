@@ -19,7 +19,7 @@ func TestHistory(t *testing.T) {
 
 	t.Run("Constructor", func(t *testing.T) {
 		t.Run("should create a new clean manager", func(t *testing.T) {
-			mng := newManager(Config{}, newFs())
+			mng := NewManager(Config{FileSys: newFs()})
 			assert.Equal("", mng.filePath)
 			assert.Len(mng.stack, 0)
 			assert.Len(mng.set, 0)
@@ -29,7 +29,7 @@ func TestHistory(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add("foo/bar.txt", fstub.NewFile("foo", "bar"))
 
-			mng := newManager(Config{HistoryFile: "foo/bar.txt"}, fs)
+			mng := NewManager(Config{HistoryFile: "foo/bar.txt", FileSys: fs})
 
 			assert.Equal([]string{"foo", "bar"}, mng.stack)
 			assert.Contains(mng.set, "foo")
@@ -42,7 +42,7 @@ func TestHistory(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add(homeFilePath, fstub.NewFile("foo", "bar"))
 
-			mng := newManager(Config{HistoryFile: "~/foo/bar.txt"}, fs)
+			mng := NewManager(Config{HistoryFile: "~/foo/bar.txt", FileSys: fs})
 
 			assert.Equal([]string{"foo", "bar"}, mng.stack)
 			assert.Contains(mng.set, "foo")
@@ -57,7 +57,7 @@ func TestHistory(t *testing.T) {
 		t.Run("should add new commands at the end of history", func(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add(file, fstub.NewFile("foo"))
-			mng := newManager(Config{HistoryFile: file}, fs)
+			mng := NewManager(Config{HistoryFile: file, FileSys: fs})
 
 			assert.Equal([]string{"foo"}, mng.stack)
 			assert.Contains(mng.set, "foo")
@@ -78,7 +78,7 @@ func TestHistory(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add(file, fstub.NewFile("foo"))
 
-			mng := newManager(Config{HistoryFile: file}, fs)
+			mng := NewManager(Config{HistoryFile: file, FileSys: fs})
 			assert.Equal([]string{"foo"}, fs.Get(file).ContentLines())
 
 			mng.Add("bar")
@@ -90,7 +90,7 @@ func TestHistory(t *testing.T) {
 		fs := newFs()
 		fs.Root().Add("history.txt", fstub.NewFile(lines...))
 
-		return newManager(Config{HistoryFile: "history.txt"}, fs)
+		return NewManager(Config{HistoryFile: "history.txt", FileSys: fs})
 	}
 
 	t.Run("Next", func(t *testing.T) {
