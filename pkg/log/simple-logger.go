@@ -3,33 +3,50 @@ package log
 import (
 	"fmt"
 	"github.com/pkg/errors"
-	"github.com/rivo/tview"
 	"io"
 	"runtime"
 	"strings"
 	"time"
 )
 
-func NewSimpleLogger(level Level, target io.Writer) *SimpleLogger {
-	return &SimpleLogger{level: level, target: target}
+type SimpleLoggerConfig struct {
+	Level  Level
+	Format string
+}
+
+const defaultLogFormat = "[<color>]<time> [<level>] <caller>[-] <msg>\n"
+
+func NewSimpleLogger(target io.Writer, cfg SimpleLoggerConfig) *SimpleLogger {
+	if cfg.Format == "" {
+		cfg.Format = defaultLogFormat
+	}
+	return &SimpleLogger{target: target, cfg: cfg}
 }
 
 type SimpleLogger struct {
-	level  Level
+	cfg    SimpleLoggerConfig
 	target io.Writer
 }
 
 func (l *SimpleLogger) log(level Level, msg string) {
-	if level < l.level {
+	if level < l.cfg.Level {
 		return
 	}
 	now := time.Now().Format("15:04:05")
 	color := level.Color()
+
 	_, file, line, _ := runtime.Caller(2)
 	parts := strings.Split(file, "/")
-	prefix := tview.Escape(fmt.Sprintf("%s [%s] %s:%d", now, level, parts[len(parts)-1], line))
+	caller := fmt.Sprintf("%s:%d", parts[len(parts)-1], line)
 
-	_, err := l.target.Write([]byte(fmt.Sprintf("[%s]%s[-] %s\n", color, prefix, msg)))
+	log := l.cfg.Format
+	log = strings.Replace(log, "<color>", color, -1)
+	log = strings.Replace(log, "<time>", now, -1)
+	log = strings.Replace(log, "<level>", level.String(), -1)
+	log = strings.Replace(log, "<caller>", caller, -1)
+	log = strings.Replace(log, "<msg>", msg, -1)
+
+	_, err := l.target.Write([]byte(log))
 	if err != nil {
 		panic(errors.WithMessage(err, "writing to log target"))
 	}
