@@ -58,22 +58,22 @@ func (scr *ScreenStub) Fill(r rune, s tcell.Style) {
 }
 
 func (scr *ScreenStub) SetCell(x int, y int, style tcell.Style, ch ...rune) {
-	if x < len(scr.data) && y < len(scr.data[x]) && len(ch) > 0 {
-		scr.data[x][y] = ch[0]
+	if y < len(scr.data) && x < len(scr.data[y]) && len(ch) > 0 {
+		scr.data[y][x] = ch[0]
 	}
 }
 
 func (scr *ScreenStub) GetContent(x, y int) (mainc rune, combc []rune, style tcell.Style, width int) {
-	if x < len(scr.data) && y < len(scr.data[x]) {
-		return scr.data[x][y], nil, tcell.StyleDefault, 1
+	if y < len(scr.data) && x < len(scr.data[y]) {
+		return scr.data[y][x], nil, tcell.StyleDefault, 1
 	} else {
 		return 0, nil, tcell.StyleDefault, 0
 	}
 }
 
 func (scr *ScreenStub) SetContent(x int, y int, mainc rune, combc []rune, style tcell.Style) {
-	if x < len(scr.data) && y < len(scr.data[x]) {
-		scr.data[x][y] = mainc
+	if y < len(scr.data) && x < len(scr.data[y]) {
+		scr.data[y][x] = mainc
 	}
 }
 

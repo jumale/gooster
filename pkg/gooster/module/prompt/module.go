@@ -24,6 +24,9 @@ func NewModule(cfg Config) *Module {
 }
 
 func newModule(cfg Config, fs filesys.FileSys) *Module {
+	if cfg.Label == "" {
+		cfg.Label = " > "
+	}
 	return &Module{cfg: cfg, fs: fs}
 }
 
@@ -34,9 +37,11 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	m.history = history.NewManager(history.Config{
 		HistoryFile: m.cfg.HistoryFile,
 		Log:         ctx.Log(),
+		FileSys:     m.fs,
 	})
 
-	m.view.SetLabel(" > ")
+	m.view.SetLabel(m.cfg.Label)
+	m.view.SetFieldWidth(m.cfg.FieldWidth)
 	m.view.SetBorder(false)
 	m.view.SetLabelColor(m.cfg.Colors.Label)
 	m.view.SetBackgroundColor(m.cfg.Colors.Bg)
@@ -53,6 +58,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 			m.handleEventExecCommand(event)
 		case EventSendUserInput:
 			m.handleEventSendUserInput(event)
+			m.Events().Dispatch(gooster.EventOutput{Data: []byte(event.Input + "\n")})
 		case gooster.EventInterrupt:
 			m.handleEventInterruptCommand()
 		}

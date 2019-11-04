@@ -7,10 +7,12 @@ import (
 
 type Config struct {
 	gooster.ModuleConfig `json:",inline"`
+	Label                string       `json:"label"`
 	Colors               ColorsConfig `json:"colors"`
 	PrintDivider         bool         `json:"print_divider"`
 	PrintCommand         bool         `json:"print_command"`
 	HistoryFile          string       `json:"history_file"`
+	FieldWidth           int          `json:"field_width"`
 	Keys                 KeysConfig   `json:"keys"`
 }
 

@@ -11,6 +11,8 @@ import (
 
 type AppContextConfig struct {
 	LogLevel          log.Level
+	LogFormat         string
+	LogTarget         io.Writer
 	DelayEventManager bool
 }
 
@@ -43,7 +45,16 @@ func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
 	}))
 
 	output := &output{em}
-	logger = log.NewSimpleLogger(cfg.LogLevel, output)
+
+	var logTarget io.Writer = output
+	if cfg.LogTarget != nil {
+		logTarget = cfg.LogTarget
+	}
+
+	logger = log.NewSimpleLogger(logTarget, log.SimpleLoggerConfig{
+		Level:  cfg.LogLevel,
+		Format: cfg.LogFormat,
+	})
 
 	ctx = &AppContext{
 		cfg: cfg,
@@ -78,7 +89,9 @@ func (ctx *AppContext) Close() error {
 
 	// substitute logger with an stdout logger,
 	// in case if some modules will try to send logs after everything is closed
-	ctx.log = log.NewSimpleLogger(ctx.cfg.LogLevel, os.Stdout)
+	ctx.log = log.NewSimpleLogger(os.Stdout, log.SimpleLoggerConfig{
+		Level: ctx.cfg.LogLevel,
+	})
 
 	if err := ctx.closeService(ctx.em); err != nil {
 		return errors.WithMessage(err, "closing event manager")

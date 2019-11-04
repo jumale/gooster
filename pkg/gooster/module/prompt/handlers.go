@@ -32,7 +32,7 @@ func (m *Module) handleEventExecCommand(event EventExecCommand) {
 	m.history.Add(command)
 
 	if m.cfg.PrintCommand {
-		m.Output().WriteF("[%s]> %s[-]\n", getColorName(m.cfg.Colors.Command), command)
+		m.Output().WriteF("[%s]%s%s[-]\n", getColorName(m.cfg.Colors.Command), m.cfg.Label, command)
 	}
 	// If it's exit command
 	if command == "exit" {
@@ -54,7 +54,7 @@ func (m *Module) handleEventExecCommand(event EventExecCommand) {
 				m.Log().Error(err)
 			}
 		}
-		m.Log().DebugF("Command finished", command)
+		m.Log().DebugF("Command finished `%s`", command)
 		m.clearCommand()
 	}()
 }
