@@ -7,5 +7,11 @@ run:
 profile:
 	bash ./.scripts/profile.sh
 
+test:
+	go test '' ./pkg/...
+
+bench:
+	go test '' -bench=. ./pkg/...
+
 debug:
 	dlv debug --headless --listen=:2345 --api-version=2 --accept-multiclient cmd/app/main.go
