@@ -52,6 +52,9 @@ func (app *App) RegisterModule(mod Module, extensions ...Extension) {
 	}
 
 	for _, ext := range extensions {
+		if !ext.Config().Enabled {
+			continue
+		}
 		if err := ext.Init(mod, app.AppContext); err != nil {
 			panic(errors.WithMessage(err, "init extension"))
 		}
