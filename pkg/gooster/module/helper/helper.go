@@ -47,7 +47,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 
 	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
-		case EventSetCompletion:
+		case gooster.EventSetCompletion:
 			m.handleSetCompletion(event)
 		}
 		return e

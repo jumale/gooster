@@ -2,6 +2,7 @@ package gooster
 
 import (
 	"fmt"
+	"github.com/jumale/gooster/pkg/cmd"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/rivo/tview"
 )
@@ -22,6 +23,11 @@ type EventDraw struct{}
 
 type EventOutput struct {
 	Data []byte
+}
+
+type EventSetCompletion struct {
+	Commands   []cmd.Definition
+	Completion []string
 }
 
 func (e EventOutput) NeedsDraw() bool {

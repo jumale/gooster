@@ -2,10 +2,10 @@ package prompt
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/cmd"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/gooster"
-	"github.com/jumale/gooster/pkg/gooster/module/helper"
 	"github.com/jumale/gooster/pkg/history"
 	"github.com/rivo/tview"
 )
@@ -81,7 +81,9 @@ func (m *Module) submit(key tcell.Key) {
 	}
 	switch key {
 	case tcell.KeyTab:
-		m.Events().Dispatch(helper.EventSetCompletion{Input: input})
+		// ignore parsing errors, because non-complete commands are also allowed
+		commands, _ := cmd.ParseCommands(input)
+		m.Events().Dispatch(gooster.EventSetCompletion{Commands: commands})
 
 	case tcell.KeyEnter:
 		if m.cmd == nil {
