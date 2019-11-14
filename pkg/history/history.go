@@ -30,10 +30,9 @@ func NewManager(cfg Config) *Manager {
 	}
 
 	mng := &Manager{
-		index: -1,
-		set:   make(map[string]struct{}),
-		log:   log.EmptyLogger{},
-		fs:    cfg.FileSys,
+		set: make(map[string]struct{}),
+		log: log.EmptyLogger{},
+		fs:  cfg.FileSys,
 	}
 	if cfg.Log != nil {
 		mng.log = cfg.Log
@@ -48,6 +47,8 @@ func NewManager(cfg Config) *Manager {
 	if mng.filePath != "" {
 		mng.loadHistoryLines(mng.filePath)
 	}
+
+	mng.Reset()
 
 	return mng
 }
@@ -86,32 +87,53 @@ func (h *Manager) Prev() string {
 		return ""
 	}
 
-	if h.index < 0 {
+	if !h.IsActive() {
 		h.index = ln
 	}
 	h.index--
+	// loop back if reached end of list
 	if h.index < 0 {
 		h.index = ln - 1
 	}
 
-	return h.stack[h.index]
+	return h.Current()
 }
 
 func (h *Manager) Next() string {
 	ln := len(h.stack)
-	if h.index < 0 {
+	if !h.IsActive() {
 		h.log.Debug("history: list is not active")
 		return ""
 	}
 
 	h.index++
 	if h.index >= ln {
-		h.index = -1
+		h.Reset()
 		h.log.Debug("history: there is no next")
 		return ""
 	}
 
+	return h.Current()
+}
+
+func (h *Manager) Current() string {
 	return h.stack[h.index]
+}
+
+func (h *Manager) Index() int {
+	return h.index
+}
+
+func (h *Manager) IsFirst() bool {
+	return h.index == 0
+}
+
+func (h *Manager) IsLast() bool {
+	return h.index == len(h.stack)-1
+}
+
+func (h *Manager) IsActive() bool {
+	return h.index != -1
 }
 
 func (h *Manager) Find(search string) string {
