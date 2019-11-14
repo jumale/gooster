@@ -8,6 +8,8 @@ package events
 // subscribers will not be called for this event.
 type EventHandler func(event IEvent) IEvent
 
+var StopPropagation IEvent = nil
+
 type IEvent interface{}
 
 type Manager interface {
