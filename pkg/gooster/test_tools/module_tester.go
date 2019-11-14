@@ -16,21 +16,9 @@ import (
 	"testing"
 )
 
-func TestableModule(t *testing.T, m gooster.Module) *ModuleTester {
-	logs := bytes.NewBuffer(nil)
-	ctx, err := gooster.NewAppContext(
-		gooster.AppContextConfig{
-			LogLevel:          log.Debug,
-			LogFormat:         "<level>##<msg>\n",
-			LogTarget:         logs,
-			DelayEventManager: false,
-		},
-	)
-	if err != nil {
-		panic(errors.WithMessagef(err, "could not create a module tester for %T", m))
-	}
-
-	err = m.Init(ctx)
+func NewModuleTester(t *testing.T, m gooster.Module) *ModuleTester {
+	ctx, logs := TestableContext()
+	err := m.Init(ctx)
 	if err != nil {
 		panic(errors.WithMessagef(err, "could not init module %T", m))
 	}
@@ -80,7 +68,9 @@ func (t *ModuleTester) PressKey(key tcell.Key, r ...rune) *ModuleTester {
 	if len(r) == 0 {
 		r = append(r, 0)
 	}
-	t.module.GetInputCapture()(tcell.NewEventKey(key, r[0], tcell.ModNone))
+	event := tcell.NewEventKey(key, r[0], tcell.ModNone)
+	handle := t.module.GetInputCapture()
+	handle(event)
 	return t
 }
 
