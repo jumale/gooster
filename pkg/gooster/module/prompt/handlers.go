@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/command"
 	"github.com/jumale/gooster/pkg/convert"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
@@ -13,8 +14,7 @@ func (m *Module) handleEventSetPrompt(event EventSetPrompt) {
 }
 
 func (m *Module) handleEventClearPrompt() {
-	m.view.SetText("")
-	m.history.Reset()
+	m.clearPrompt()
 }
 
 var ignoreCommandErrors = regexList{
@@ -39,13 +39,14 @@ func (m *Module) handleEventExecCommand(event EventExecCommand) {
 		go func() { m.Events().Dispatch(gooster.EventExit{}) }()
 		return
 	}
+	m.clearPrompt()
+
 	// If it looks like "cd" command:
 	if path := detectWorkDirPath(m.fs, command); path != "" {
 		m.Events().Dispatch(workdir.EventChangeDir{Path: path})
 		return
 	}
 
-	m.view.SetText("")
 	m.cmd = NewCommand(command).SetOutput(m.Output())
 	go func() {
 		m.Log().DebugF("Starting command `%s`", command)
@@ -66,7 +67,7 @@ func (m *Module) handleEventSendUserInput(event EventSendUserInput) {
 		m.Log().Error("Could not send user input - there is no current command running")
 		return
 	}
-	m.view.SetText("")
+	m.clearPrompt()
 	if _, err := m.cmd.Write(append([]byte(event.Input), newLine)); err != nil {
 		m.Log().Error(err)
 	}
@@ -81,11 +82,33 @@ func (m *Module) handleEventInterruptCommand() {
 }
 
 func (m *Module) handleKeyHistoryPrev(event *tcell.EventKey) *tcell.EventKey {
+	if !m.history.IsActive() {
+		m.latestInput = m.view.GetText()
+	}
 	m.Events().Dispatch(EventSetPrompt{Input: m.history.Prev()})
 	return event
 }
 
 func (m *Module) handleKeyHistoryNext(event *tcell.EventKey) *tcell.EventKey {
-	m.Events().Dispatch(EventSetPrompt{Input: m.history.Next()})
+	input := m.history.Next()
+	if !m.history.IsActive() {
+		input = m.latestInput
+	}
+	m.Events().Dispatch(EventSetPrompt{Input: input})
 	return event
+}
+
+func (m *Module) handleCompletion(input string) {
+	if m.tabPressed {
+		m.tabPressed = false
+		m.Events().Dispatch(gooster.EventSetFocusByName{TargetName: "completion"})
+		return
+	}
+
+	commands, err := command.ParseCommands(input)
+	if err != nil {
+		m.Log().DebugF("ParseCommands error: %s", err)
+	}
+	m.Events().Dispatch(gooster.EventSetCompletion{Commands: commands})
+	m.tabPressed = true
 }

@@ -2,21 +2,23 @@ package prompt
 
 import (
 	"github.com/gdamore/tcell"
-	"github.com/jumale/gooster/pkg/cmd"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/history"
 	"github.com/rivo/tview"
+	"strings"
 )
 
 type Module struct {
 	*gooster.BaseModule
-	cfg     Config
-	fs      filesys.FileSys
-	view    *tview.InputField
-	history *history.Manager
-	cmd     *Command
+	cfg         Config
+	fs          filesys.FileSys
+	view        *tview.InputField
+	history     *history.Manager
+	cmd         *Command
+	tabPressed  bool
+	latestInput string
 }
 
 func NewModule(cfg Config) *Module {
@@ -61,6 +63,11 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 			m.Events().Dispatch(gooster.EventOutput{Data: []byte(event.Input + "\n")})
 		case gooster.EventInterrupt:
 			m.handleEventInterruptCommand()
+		case gooster.EventSetCompletion:
+			if len(event.Completion) == 1 {
+				m.view.SetText(completeCommand(m.view.GetText(), event.Completion[0]))
+				return events.StopPropagation
+			}
 		}
 		return e
 	}))
@@ -81,9 +88,7 @@ func (m *Module) submit(key tcell.Key) {
 	}
 	switch key {
 	case tcell.KeyTab:
-		// ignore parsing errors, because non-complete commands are also allowed
-		commands, _ := cmd.ParseCommands(input)
-		m.Events().Dispatch(gooster.EventSetCompletion{Commands: commands})
+		m.handleCompletion(input)
 
 	case tcell.KeyEnter:
 		if m.cmd == nil {
@@ -92,4 +97,27 @@ func (m *Module) submit(key tcell.Key) {
 			m.Events().Dispatch(EventSendUserInput{Input: input})
 		}
 	}
+}
+
+func (m *Module) clearCommand() {
+	lineBreak := ""
+	if m.cmd != nil && m.cmd.LastChar() != newLine {
+		lineBreak = "\n"
+	}
+
+	m.cmd = nil
+	if m.cfg.PrintDivider {
+		_, _, width, _ := m.view.GetInnerRect()
+		m.Output().WriteF(
+			"%s[%s]%s[-]\n",
+			lineBreak,
+			getColorName(m.cfg.Colors.Divider),
+			strings.Repeat("-", width-2),
+		)
+	}
+}
+
+func (m *Module) clearPrompt() {
+	m.view.SetText("")
+	m.history.Reset()
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"os/exec"
-	"strings"
 )
 
 type Command struct {
@@ -54,24 +53,6 @@ func (c *Command) Write(p []byte) (n int, err error) {
 
 func (c *Command) LastChar() byte {
 	return c.lastChar
-}
-
-func (m *Module) clearCommand() {
-	lineBreak := ""
-	if m.cmd != nil && m.cmd.LastChar() != newLine {
-		lineBreak = "\n"
-	}
-
-	m.cmd = nil
-	if m.cfg.PrintDivider {
-		_, _, width, _ := m.view.GetInnerRect()
-		m.Output().WriteF(
-			"%s[%s]%s[-]\n",
-			lineBreak,
-			getColorName(m.cfg.Colors.Divider),
-			strings.Repeat("-", width-2),
-		)
-	}
 }
 
 type writerHook struct {

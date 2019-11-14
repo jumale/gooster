@@ -4,9 +4,10 @@ import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
-	"github.com/jumale/gooster/pkg/gooster/module/helper"
+	"github.com/jumale/gooster/pkg/gooster/module/complete"
 	"github.com/jumale/gooster/pkg/gooster/module/output"
 	"github.com/jumale/gooster/pkg/gooster/module/prompt"
+	promptExt "github.com/jumale/gooster/pkg/gooster/module/prompt/ext"
 	"github.com/jumale/gooster/pkg/gooster/module/status"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	workdirExt "github.com/jumale/gooster/pkg/gooster/module/workdir/ext"
@@ -126,6 +127,10 @@ func Run() {
 			HistoryNext: tcell.KeyDown,
 			HistoryPrev: tcell.KeyUp,
 		},
+	}), promptExt.NewBashCompletion(promptExt.BashCompletionConfig{
+		ExtensionConfig: gooster.ExtensionConfig{
+			Enabled: true,
+		},
 	}))
 
 	shell.RegisterModule(status.NewModule(status.Config{
@@ -145,7 +150,7 @@ func Run() {
 		},
 	}))
 
-	shell.RegisterModule(helper.NewModule(helper.Config{
+	shell.RegisterModule(complete.NewModule(complete.Config{
 		ModuleConfig: gooster.ModuleConfig{
 			Position: gooster.Position{
 				Col: 1, Row: 3,
@@ -154,8 +159,11 @@ func Run() {
 			Enabled: true,
 			Focused: false,
 		},
-		Colors: helper.ColorsConfig{
+		Colors: complete.ColorsConfig{
 			Bg: tcell.NewHexColor(0x333333),
+		},
+		Keys: complete.KeysConfig{
+			NextItem: tcell.KeyTab,
 		},
 	}))
 

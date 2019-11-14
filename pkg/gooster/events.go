@@ -2,7 +2,7 @@ package gooster
 
 import (
 	"fmt"
-	"github.com/jumale/gooster/pkg/cmd"
+	"github.com/jumale/gooster/pkg/command"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/rivo/tview"
 )
@@ -19,19 +19,23 @@ type EventSetFocus struct {
 	Target tview.Primitive
 }
 
+type EventSetFocusByName struct {
+	TargetName string
+}
+
 type EventDraw struct{}
 
 type EventOutput struct {
 	Data []byte
 }
 
-type EventSetCompletion struct {
-	Commands   []cmd.Definition
-	Completion []string
-}
-
 func (e EventOutput) NeedsDraw() bool {
 	return true
+}
+
+type EventSetCompletion struct {
+	Commands   []command.Definition
+	Completion []string
 }
 
 type EventOpenDialog struct {

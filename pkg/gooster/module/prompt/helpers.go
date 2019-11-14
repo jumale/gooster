@@ -76,3 +76,17 @@ func (r regexList) MatchString(s string) bool {
 	}
 	return false
 }
+
+const (
+	space  byte = 32
+	escape      = 92
+)
+
+func completeCommand(cmd string, val string) string {
+	for i := len(cmd) - 1; i >= 0; i -= 1 {
+		if cmd[i] == space && (i-1 > 0 || cmd[i-1] != escape) {
+			return cmd[:i+1] + val
+		}
+	}
+	return val
+}

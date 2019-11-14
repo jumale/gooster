@@ -32,7 +32,7 @@ func TestModule(t *testing.T) {
 	fs := fstub.New(fsProps)
 
 	init := func(t *testing.T, cfg Config, fs filesys.FileSys) *tools.ModuleTester {
-		m := tools.TestableModule(t, newModule(cfg, fs))
+		m := tools.NewModuleTester(t, newModule(cfg, fs))
 		m.SetSize(10, 1)
 		return m
 	}
@@ -102,39 +102,41 @@ func TestModule(t *testing.T) {
 		module.AssertHasLog("Command finished `bash ./testdata/prompt.sh`")
 	})
 
+	cfgWithHistory := Config{
+		Label:       promptLabel,
+		Colors:      colors,
+		FieldWidth:  10,
+		HistoryFile: "/history",
+		Keys: KeysConfig{
+			HistoryPrev: tcell.KeyUp,
+			HistoryNext: tcell.KeyDown,
+		},
+	}
+	fsWithHistory := fstub.New(fsProps)
+	fsWithHistory.Root().Add("/history", fstub.NewFile(
+		"foo",
+		"bar",
+		"baz",
+	))
+
 	t.Run("should navigate history", func(t *testing.T) {
-		cfg := Config{
-			Label:       promptLabel,
-			Colors:      colors,
-			FieldWidth:  10,
-			HistoryFile: "/history",
-			Keys: KeysConfig{
-				HistoryPrev: tcell.KeyUp,
-				HistoryNext: tcell.KeyDown,
-			},
-		}
-		fs := fstub.New(fsProps)
-		fs.Root().Add("/history", fstub.NewFile(
-			"foo",
-			"bar",
-			"baz",
-		))
-		module := init(t, cfg, fs)
+		module := init(t, cfgWithHistory, fsWithHistory)
 
 		module.Draw()
-		module.AssertView(promptLabel)
+		module.SendEvent(EventSetPrompt{Input: "init"})
+		module.AssertView(withLabel("init"))
 
-		module.PressKey(cfg.Keys.HistoryPrev)
+		module.PressKey(cfgWithHistory.Keys.HistoryPrev)
 		module.AssertView(withLabel("baz"))
 
-		module.PressKey(cfg.Keys.HistoryPrev)
+		module.PressKey(cfgWithHistory.Keys.HistoryPrev)
 		module.AssertView(withLabel("bar"))
 
-		module.PressKey(cfg.Keys.HistoryNext)
+		module.PressKey(cfgWithHistory.Keys.HistoryNext)
 		module.AssertView(withLabel("baz"))
 
-		module.PressKey(cfg.Keys.HistoryNext)
-		module.AssertView(promptLabel)
+		module.PressKey(cfgWithHistory.Keys.HistoryNext)
+		module.AssertView(withLabel("init"))
 	})
 
 	t.Run("should use configured colors", func(t *testing.T) {
