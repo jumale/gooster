@@ -1,11 +1,8 @@
-package cmd
+package command
 
-import "github.com/pkg/errors"
-
-type Definition struct {
-	Command string
-	Args    []string
-}
+import (
+	"github.com/pkg/errors"
+)
 
 const (
 	space     rune = 32

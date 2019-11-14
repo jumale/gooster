@@ -1,4 +1,4 @@
-package cmd
+package command
 
 import (
 	_assert "github.com/stretchr/testify/assert"
