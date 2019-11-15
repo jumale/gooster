@@ -2,12 +2,15 @@ package complete
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/command"
 	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/jumale/gooster/pkg/gooster/module/prompt"
 	"github.com/rivo/tview"
 	"math"
 )
 
 func (m *Module) handleSetCompletion(event gooster.EventSetCompletion) {
+	m.current = event
 	m.view.Clear()
 
 	list := event.Completion
@@ -25,25 +28,34 @@ func (m *Module) handleSetCompletion(event gooster.EventSetCompletion) {
 		}
 		m.view.SetCell(row, col, tview.NewTableCell(list[i]))
 	}
+
+	if len(event.Completion) > 1 {
+		m.Events().Dispatch(gooster.EventSetFocus{Target: m.view})
+	}
 }
 
-func (m *Module) handleSelectNextItem(event *tcell.EventKey) *tcell.EventKey {
-
+func (m *Module) handleNextItem(event *tcell.EventKey) *tcell.EventKey {
+	row, col := m.view.GetSelection()
+	col += 1
+	if col >= m.view.GetColumnCount() {
+		col = 0
+		row += 1
+	}
+	if row >= m.view.GetRowCount() {
+		row = 0
+	}
+	m.Log().DebugF("Select %d %d", row, col)
+	m.view.Select(row, col)
 	return event
 }
 
-func (m *Module) handleMoveDown(event *tcell.EventKey) *tcell.EventKey {
-
-	return event
-}
-
-func (m *Module) handleMoveLeft(event *tcell.EventKey) *tcell.EventKey {
-
-	return event
-}
-
-func (m *Module) handleMoveRight(event *tcell.EventKey) *tcell.EventKey {
-
+func (m *Module) handleSelectItem(event *tcell.EventKey) *tcell.EventKey {
+	selected := m.view.GetCell(m.view.GetSelection()).Text
+	m.view.Clear()
+	m.Events().Dispatch(prompt.EventSetPrompt{
+		Input: command.Complete(m.current.Input, selected),
+		Focus: true,
+	})
 	return event
 }
 

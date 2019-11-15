@@ -2,6 +2,7 @@ package prompt
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/command"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/gooster"
@@ -17,7 +18,6 @@ type Module struct {
 	view        *tview.InputField
 	history     *history.Manager
 	cmd         *Command
-	tabPressed  bool
 	latestInput string
 }
 
@@ -65,7 +65,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 			m.handleEventInterruptCommand()
 		case gooster.EventSetCompletion:
 			if len(event.Completion) == 1 {
-				m.view.SetText(completeCommand(m.view.GetText(), event.Completion[0]))
+				m.view.SetText(command.Complete(m.view.GetText(), event.Completion[0]))
 				return events.StopPropagation
 			}
 		}

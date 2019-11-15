@@ -34,6 +34,7 @@ func (e EventOutput) NeedsDraw() bool {
 }
 
 type EventSetCompletion struct {
+	Input      string
 	Commands   []command.Definition
 	Completion []string
 }

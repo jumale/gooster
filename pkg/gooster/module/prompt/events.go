@@ -2,6 +2,7 @@ package prompt
 
 type EventSetPrompt struct {
 	Input string
+	Focus bool
 }
 
 func (e EventSetPrompt) NeedsDraw() bool {

@@ -164,6 +164,7 @@ func Run() {
 		},
 		Keys: complete.KeysConfig{
 			NextItem: tcell.KeyTab,
+			Select:   tcell.KeyEnter,
 		},
 	}))
 

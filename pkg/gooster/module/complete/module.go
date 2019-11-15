@@ -21,6 +21,7 @@ type ColorsConfig struct {
 
 type KeysConfig struct {
 	NextItem tcell.Key
+	Select   tcell.Key
 }
 
 func NewModule(cfg Config) *Module {
@@ -31,8 +32,9 @@ func NewModule(cfg Config) *Module {
 
 type Module struct {
 	*gooster.BaseModule
-	cfg  Config
-	view *tview.Table
+	cfg     Config
+	view    *tview.Table
+	current gooster.EventSetCompletion
 }
 
 func (m *Module) Config() gooster.ModuleConfig {
@@ -50,20 +52,14 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		switch event := e.(type) {
 		case gooster.EventSetCompletion:
 			m.handleSetCompletion(event)
-		case gooster.EventSetFocusByName:
-			if event.TargetName == CompletionView {
-				m.Events().Dispatch(gooster.EventSetFocus{Target: m.view})
-			}
 		}
 		return e
 	}))
 
-	//m.HandleKeyEvents(gooster.KeyEventHandlers{
-	//	tcell.KeyUp: m.handleMoveUp,
-	//	tcell.KeyDown: m.handleMoveDown,
-	//	tcell.KeyLeft: m.handleMoveLeft,
-	//	tcell.KeyRight: m.handleMoveRight,
-	//})
+	m.HandleKeyEvents(gooster.KeyEventHandlers{
+		m.cfg.Keys.NextItem: m.handleNextItem,
+		m.cfg.Keys.Select:   m.handleSelectItem,
+	})
 
 	return nil
 }

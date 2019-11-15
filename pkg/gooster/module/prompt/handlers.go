@@ -11,6 +11,9 @@ import (
 
 func (m *Module) handleEventSetPrompt(event EventSetPrompt) {
 	m.view.SetText(event.Input)
+	if event.Focus {
+		m.Events().Dispatch(gooster.EventSetFocus{Target: m.view})
+	}
 }
 
 func (m *Module) handleEventClearPrompt() {
@@ -99,16 +102,9 @@ func (m *Module) handleKeyHistoryNext(event *tcell.EventKey) *tcell.EventKey {
 }
 
 func (m *Module) handleCompletion(input string) {
-	if m.tabPressed {
-		m.tabPressed = false
-		m.Events().Dispatch(gooster.EventSetFocusByName{TargetName: "completion"})
-		return
-	}
-
 	commands, err := command.ParseCommands(input)
 	if err != nil {
 		m.Log().DebugF("ParseCommands error: %s", err)
 	}
-	m.Events().Dispatch(gooster.EventSetCompletion{Commands: commands})
-	m.tabPressed = true
+	m.Events().Dispatch(gooster.EventSetCompletion{Input: input, Commands: commands})
 }

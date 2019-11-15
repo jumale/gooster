@@ -34,13 +34,16 @@ func (b *BashCompletion) Init(_ gooster.Module, ctx *gooster.AppContext) error {
 	ctx.Events().Subscribe(events.HandleWithPrio(10, func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
 		case gooster.EventSetCompletion:
-			if len(event.Completion) == 0 { // only if there are no completions yet
-				comp, err := getBashCompletion(event.Commands)
-				if err != nil {
-					ctx.Log().Debug(err)
-				}
-				return gooster.EventSetCompletion{Commands: event.Commands, Completion: comp}
+			// skip if command already has completions defined by someone else
+			if len(event.Completion) > 0 {
+				return e
 			}
+
+			var err error
+			if event.Completion, err = getBashCompletion(event.Commands); err != nil {
+				ctx.Log().Debug(err)
+			}
+			return event
 		}
 		return e
 	}))

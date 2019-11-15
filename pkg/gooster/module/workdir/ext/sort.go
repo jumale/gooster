@@ -38,10 +38,8 @@ func (ext *SortTree) Init(m gooster.Module, ctx *gooster.AppContext) error {
 	ctx.Events().Subscribe(events.HandleWithPrio(100, func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
 		case workdir.EventSetChildren:
-			return workdir.EventSetChildren{
-				Target:   event.Target,
-				Children: ext.sort(event.Children),
-			}
+			event.Children = ext.sort(event.Children)
+			return event
 		}
 		return e
 	}))
