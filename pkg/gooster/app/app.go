@@ -5,9 +5,9 @@ import (
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/gooster/module/complete"
+	completeExt "github.com/jumale/gooster/pkg/gooster/module/complete/ext"
 	"github.com/jumale/gooster/pkg/gooster/module/output"
 	"github.com/jumale/gooster/pkg/gooster/module/prompt"
-	promptExt "github.com/jumale/gooster/pkg/gooster/module/prompt/ext"
 	"github.com/jumale/gooster/pkg/gooster/module/status"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	workdirExt "github.com/jumale/gooster/pkg/gooster/module/workdir/ext"
@@ -127,7 +127,7 @@ func Run() {
 			HistoryNext: tcell.KeyDown,
 			HistoryPrev: tcell.KeyUp,
 		},
-	}), promptExt.NewBashCompletion(promptExt.BashCompletionConfig{
+	}), completeExt.NewBashCompletion(completeExt.BashCompletionConfig{
 		ExtensionConfig: gooster.ExtensionConfig{
 			Enabled: true,
 		},

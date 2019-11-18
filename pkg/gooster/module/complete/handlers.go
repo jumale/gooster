@@ -53,7 +53,7 @@ func (m *Module) handleSelectItem(event *tcell.EventKey) *tcell.EventKey {
 	selected := m.view.GetCell(m.view.GetSelection()).Text
 	m.view.Clear()
 	m.Events().Dispatch(prompt.EventSetPrompt{
-		Input: command.Complete(m.current.Input, selected),
+		Input: command.ApplyCompletion(m.current.Input, selected+" "),
 		Focus: true,
 	})
 	return event

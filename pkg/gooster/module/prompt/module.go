@@ -65,7 +65,7 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 			m.handleEventInterruptCommand()
 		case gooster.EventSetCompletion:
 			if len(event.Completion) == 1 {
-				m.view.SetText(command.Complete(m.view.GetText(), event.Completion[0]))
+				m.view.SetText(command.ApplyCompletion(m.view.GetText(), event.Completion[0]+" "))
 				return events.StopPropagation
 			}
 		}
