@@ -13,7 +13,7 @@ import (
 
 type TypingSearchConfig struct {
 	gooster.ExtensionConfig
-	KeyPressInterval time.Duration
+	KeyPressInterval time.Duration `json:"key_press_interval"`
 }
 
 type TypingSearch struct {

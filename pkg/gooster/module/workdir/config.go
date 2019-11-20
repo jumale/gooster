@@ -14,7 +14,7 @@ type Config struct {
 
 type ColorsConfig struct {
 	Bg       tcell.Color `json:"bg"`
-	Graphics tcell.Color `json:"lines"`
+	Graphics tcell.Color `json:"graphics"`
 	Folder   tcell.Color `json:"folder"`
 	File     tcell.Color `json:"file"`
 }

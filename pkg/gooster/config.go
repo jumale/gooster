@@ -7,18 +7,17 @@ import (
 )
 
 type AppConfig struct {
-	Grid     GridConfig
-	Keys     KeysConfig
-	LogLevel log.Level
-	Debug    bool
-	Dialog   dialog.Config
+	Grid     GridConfig    `json:"grid"`
+	Keys     KeysConfig    `json:"keys"`
+	LogLevel log.Level     `json:"log_level"`
+	Dialog   dialog.Config `json:"dialog"`
 }
 
 type GridConfig struct {
-	Cols []int
-	Rows []int
+	Cols []int `json:"cols"`
+	Rows []int `json:"rows"`
 }
 
 type KeysConfig struct {
-	Exit tcell.Key
+	Exit tcell.Key `json:"exit"`
 }

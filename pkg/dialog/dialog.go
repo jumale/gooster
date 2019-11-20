@@ -10,13 +10,13 @@ type Dialog interface {
 }
 
 type Config struct {
-	Colors ColorsConfig
+	Colors ColorsConfig `json:"colors"`
 }
 
 type ColorsConfig struct {
-	Bg             tcell.Color
-	BtnColor       tcell.Color
-	BtnActiveColor tcell.Color
+	Bg        tcell.Color `json:"bg"`
+	Btn       tcell.Color `json:"btn"`
+	BtnActive tcell.Color `json:"btn_active"`
 }
 
 type Context interface {

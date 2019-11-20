@@ -36,15 +36,13 @@ func Run() {
 	shell, err := gooster.NewApp(gooster.AppConfig{
 		LogLevel: args.LogLevel,
 		Grid:     grid,
-		//EventsLogPath: "/tmp/gooster-events.log",
-		Debug: args.Debug,
 		Keys: gooster.KeysConfig{
 			Exit: tcell.KeyF12,
 		},
 		Dialog: dialog.Config{
 			Colors: dialog.ColorsConfig{
-				Bg:       tcell.ColorCornflowerBlue,
-				BtnColor: tcell.ColorCornflowerBlue,
+				Bg:  tcell.ColorCornflowerBlue,
+				Btn: tcell.ColorCornflowerBlue,
 			},
 		},
 	})

@@ -27,9 +27,9 @@ type ModuleView interface {
 
 type ModuleConfig struct {
 	Position `json:",inline"`
-	Enabled  bool `json:"enabled"`
-	Focused  bool `json:"focused"`
-	FocusKey tcell.Key
+	Enabled  bool      `json:"enabled"`
+	Focused  bool      `json:"focused"`
+	FocusKey tcell.Key `json:"focus_key"`
 }
 
 type Position struct {
