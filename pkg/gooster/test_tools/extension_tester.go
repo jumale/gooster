@@ -28,7 +28,7 @@ func NewExtensionTester(t *testing.T, ext gooster.Extension, target gooster.Modu
 		assert:     assert.New(t),
 	}
 
-	ctx.Events().Subscribe(events.HandleWithPrio(-1000000, func(e events.IEvent) events.IEvent {
+	ctx.Events().Subscribe(events.HandleWithPrio(events.AfterAllOtherChanges, func(e events.IEvent) events.IEvent {
 		tester.events = append(tester.events, e)
 		return e
 	}))

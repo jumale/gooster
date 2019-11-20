@@ -75,7 +75,7 @@ func (app *App) RegisterModule(mod Module, extensions ...Extension) {
 
 func (app *App) Run() {
 	// init event handlers
-	app.Events().Subscribe(events.HandleWithPrio(-9999, func(e events.IEvent) events.IEvent {
+	app.Events().Subscribe(events.HandleWithPrio(events.AfterAllOtherChanges, func(e events.IEvent) events.IEvent {
 		switch e.(type) {
 		case EventExit:
 			app.handleExitEvent()

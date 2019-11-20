@@ -32,7 +32,7 @@ func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
 		return nil, errors.WithMessage(err, "init event manager")
 	}
 
-	em.Subscribe(events.HandleWithPrio(-1000000, func(event events.IEvent) events.IEvent {
+	em.Subscribe(events.HandleWithPrio(events.AfterAllOtherChanges, func(event events.IEvent) events.IEvent {
 		logEventToOutput(logger, event)
 
 		if drawable, ok := event.(DrawableEvent); ok {

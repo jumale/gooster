@@ -8,6 +8,11 @@ package events
 // subscribers will not be called for this event.
 type EventHandler func(event IEvent) IEvent
 
+var (
+	AfterAllOtherChanges  float64 = -999999
+	BeforeAllOtherChanges         = 999999
+)
+
 var StopPropagation IEvent = nil
 
 type IEvent interface{}
