@@ -9,9 +9,11 @@ import (
 	"github.com/jumale/gooster/pkg/gooster/module/output"
 	"github.com/jumale/gooster/pkg/gooster/module/prompt"
 	"github.com/jumale/gooster/pkg/gooster/module/status"
+	statusExt "github.com/jumale/gooster/pkg/gooster/module/status/ext"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	workdirExt "github.com/jumale/gooster/pkg/gooster/module/workdir/ext"
 	"github.com/jumale/gooster/pkg/log"
+	"github.com/rivo/tview"
 	"os"
 	"strings"
 	"time"
@@ -141,10 +143,16 @@ func Run() {
 			Focused: false,
 		},
 		Colors: status.ColorsConfig{
-			Bg:         tcell.ColorDimGray,
-			WorkDir:    tcell.ColorGold,
-			Branch:     tcell.ColorLimeGreen,
-			K8sContext: tcell.ColorSkyblue,
+			Bg: tcell.NewHexColor(0x555555),
+		},
+	}), statusExt.NewWorkDir(statusExt.WorkDirConfig{
+		ExtensionConfig: gooster.ExtensionConfig{
+			Enabled: true,
+		},
+		Col:   0,
+		Align: tview.AlignLeft,
+		Colors: statusExt.WorkDirColorsConfig{
+			Text: tcell.ColorGold,
 		},
 	}))
 
