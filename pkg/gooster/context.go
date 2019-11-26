@@ -1,6 +1,7 @@
 package gooster
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/events"
@@ -67,6 +68,11 @@ func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
 		Level:  cfg.LogLevel,
 		Format: cfg.LogFormat,
 	})
+
+	// pipe stdout to the app output
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	go pipeStdout(logger, r)
 
 	if cfg.FileSys == nil {
 		cfg.FileSys = filesys.Default{}
@@ -174,5 +180,16 @@ func logEventToOutput(logger log.Logger, event events.IEvent) {
 			msg = msg[:130] + "..."
 		}
 		logger.Debug(msg)
+	}
+}
+
+const lineBreak byte = 10
+
+func pipeStdout(log log.Logger, stdout io.Reader) {
+	line, err := bufio.NewReader(stdout).ReadBytes(lineBreak)
+	if err != nil {
+		log.Error("Failed to read line from stdout")
+	} else {
+		log.WarnF("Caught stdout: %s", line)
 	}
 }
