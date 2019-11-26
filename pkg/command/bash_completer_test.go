@@ -1,14 +1,14 @@
 package command
 
 import (
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 const completionDir = "./testdata/completion_context"
 
 func TestBashCompleter(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	Completion := func(cmd string, args ...string) *completionTester {
 		return &completionTester{t: t, def: Definition{Command: cmd, Args: args}}
@@ -52,7 +52,7 @@ func TestBashCompleter(t *testing.T) {
 }
 
 func TestShiftArg(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	t.Run("should keep shifting last non-empty arguments until list is empty", func(t *testing.T) {
 		var arg string
@@ -97,6 +97,6 @@ type completionTester struct {
 func (c completionTester) ShouldReturn(completions ...string) {
 	completer := NewBashCompleter(BashCompleterConfig{})
 	actual, err := completer.Get(c.def)
-	_assert.NoError(c.t, err)
-	_assert.Equal(c.t, completions, actual)
+	require.NoError(c.t, err)
+	require.Equal(c.t, completions, actual)
 }

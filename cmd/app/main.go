@@ -1,7 +1,11 @@
 package main
 
-import "github.com/jumale/gooster/pkg/gooster/app"
+import (
+	"github.com/jumale/gooster/pkg/gooster/app"
+	"os"
+)
 
 func main() {
-	app.Run()
+	homeDir, _ := os.UserHomeDir()
+	app.Run(homeDir + "/.gooster.yaml")
 }

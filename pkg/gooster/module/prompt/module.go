@@ -3,8 +3,8 @@ package prompt
 import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/command"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/events"
-	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/history"
 	"github.com/rivo/tview"
@@ -12,43 +12,65 @@ import (
 )
 
 type Module struct {
-	*gooster.BaseModule
+	gooster.Context
 	cfg         Config
-	fs          filesys.FileSys
 	view        *tview.InputField
 	history     *history.Manager
 	cmd         *Command
 	latestInput string
 }
 
-func NewModule(cfg Config) *Module {
-	return newModule(cfg, filesys.Default{})
+func NewModule() *Module {
+	return &Module{cfg: Config{
+		Label:        " > ",
+		PrintDivider: true,
+		PrintCommand: true,
+		HistoryFile:  "~/.bash_history",
+		Colors: ColorsConfig{
+			Bg:      config.Color(tcell.NewHexColor(0x555555)),
+			Label:   config.Color(tcell.ColorLime),
+			Text:    config.Color(tcell.ColorLightGray),
+			Divider: config.Color(tcell.ColorLightGreen),
+			Command: config.Color(tcell.ColorLightSkyBlue),
+		},
+		Keys: KeysConfig{
+			HistoryNext: config.Key(tcell.KeyDown),
+			HistoryPrev: config.Key(tcell.KeyUp),
+		},
+	}}
 }
 
-func newModule(cfg Config, fs filesys.FileSys) *Module {
-	if cfg.Label == "" {
-		cfg.Label = " > "
+func (m *Module) Name() string {
+	return "prompt"
+}
+
+func (m *Module) View() gooster.ModuleView {
+	return m.view
+}
+
+func (m *Module) Init(ctx gooster.Context) (err error) {
+	m.Context = ctx
+	if err = ctx.LoadConfig(&m.cfg); err != nil {
+		return err
 	}
-	return &Module{cfg: cfg, fs: fs}
-}
 
-func (m *Module) Init(ctx *gooster.AppContext) error {
-	m.view = tview.NewInputField()
-	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, m.view, m.view.Box)
-
-	m.history = history.NewManager(history.Config{
+	m.history, err = history.NewManager(history.Config{
 		HistoryFile: m.cfg.HistoryFile,
 		Log:         ctx.Log(),
-		FileSys:     m.fs,
+		FileSys:     ctx.Fs(),
 	})
+	if err != nil {
+		return err
+	}
 
+	m.view = tview.NewInputField()
 	m.view.SetLabel(m.cfg.Label)
 	m.view.SetFieldWidth(m.cfg.FieldWidth)
 	m.view.SetBorder(false)
-	m.view.SetLabelColor(m.cfg.Colors.Label)
-	m.view.SetBackgroundColor(m.cfg.Colors.Bg)
-	m.view.SetFieldBackgroundColor(m.cfg.Colors.Bg)
-	m.view.SetFieldTextColor(m.cfg.Colors.Text)
+	m.view.SetLabelColor(m.cfg.Colors.Label.Origin())
+	m.view.SetBackgroundColor(m.cfg.Colors.Bg.Origin())
+	m.view.SetFieldBackgroundColor(m.cfg.Colors.Bg.Origin())
+	m.view.SetFieldTextColor(m.cfg.Colors.Text.Origin())
 
 	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
@@ -72,9 +94,9 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		return e
 	}))
 
-	m.HandleKeyEvents(gooster.KeyEventHandlers{
-		m.cfg.Keys.HistoryPrev: m.handleKeyHistoryPrev,
-		m.cfg.Keys.HistoryNext: m.handleKeyHistoryNext,
+	gooster.HandleKeyEvents(m.view, gooster.KeyEventHandlers{
+		m.cfg.Keys.HistoryPrev.Origin(): m.handleKeyHistoryPrev,
+		m.cfg.Keys.HistoryNext.Origin(): m.handleKeyHistoryNext,
 	})
 
 	m.view.SetDoneFunc(m.submit)
@@ -111,7 +133,7 @@ func (m *Module) clearCommand() {
 		m.Output().WriteF(
 			"%s[%s]%s[-]\n",
 			lineBreak,
-			getColorName(m.cfg.Colors.Divider),
+			getColorName(m.cfg.Colors.Divider.Origin()),
 			strings.Repeat("-", width-2),
 		)
 	}

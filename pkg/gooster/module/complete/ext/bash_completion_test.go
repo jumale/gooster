@@ -9,7 +9,8 @@ import (
 
 func TestExtension(t *testing.T) {
 	t.Run("should add completion to the event", func(t *testing.T) {
-		ext := tools.NewExtensionTester(t, NewBashCompletion(BashCompletionConfig{}), nil)
+		ext := tools.NewExtensionTester(t, NewBashCompletion(), nil, nil)
+		ext.AssertInited()
 
 		commands := []command.Definition{{Command: "comple"}}
 		ext.SendEvent(gooster.EventSetCompletion{Commands: commands})
@@ -21,7 +22,9 @@ func TestExtension(t *testing.T) {
 	})
 
 	t.Run("should not add/modify completion if the event already has non-empty completion", func(t *testing.T) {
-		ext := tools.NewExtensionTester(t, NewBashCompletion(BashCompletionConfig{}), nil)
+		ext := tools.NewExtensionTester(t, NewBashCompletion(), nil, nil)
+		ext.AssertInited()
+
 		originalEvent := gooster.EventSetCompletion{
 			Commands:   []command.Definition{{Command: "comple"}},
 			Completion: []string{"bar", "baz"},
@@ -32,7 +35,8 @@ func TestExtension(t *testing.T) {
 	})
 
 	t.Run("should complete only the latest command", func(t *testing.T) {
-		ext := tools.NewExtensionTester(t, NewBashCompletion(BashCompletionConfig{}), nil)
+		ext := tools.NewExtensionTester(t, NewBashCompletion(), nil, nil)
+		ext.AssertInited()
 
 		commands := []command.Definition{
 			{Command: "compge"},

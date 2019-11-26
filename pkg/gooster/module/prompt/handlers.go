@@ -3,7 +3,6 @@ package prompt
 import (
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/command"
-	"github.com/jumale/gooster/pkg/convert"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/gooster/module/workdir"
 	"regexp"
@@ -31,34 +30,33 @@ func (m *Module) handleEventExecCommand(event EventExecCommand) {
 		return
 	}
 
-	command := convert.ToString(event.Cmd)
-	m.history.Add(command)
+	m.history.Add(event.Cmd)
 
 	if m.cfg.PrintCommand {
-		m.Output().WriteF("[%s]%s%s[-]\n", getColorName(m.cfg.Colors.Command), m.cfg.Label, command)
+		m.Output().WriteF("[%s]%s%s[-]\n", getColorName(m.cfg.Colors.Command.Origin()), m.cfg.Label, event.Cmd)
 	}
 	// If it's exit command
-	if command == "exit" {
+	if event.Cmd == "exit" {
 		go func() { m.Events().Dispatch(gooster.EventExit{}) }()
 		return
 	}
 	m.clearPrompt()
 
 	// If it looks like "cd" command:
-	if path := detectWorkDirPath(m.fs, command); path != "" {
+	if path := detectWorkDirPath(m.Fs(), event.Cmd); path != "" {
 		m.Events().Dispatch(workdir.EventChangeDir{Path: path})
 		return
 	}
 
-	m.cmd = NewCommand(command).SetOutput(m.Output())
+	m.cmd = NewCommand(event.Cmd).SetOutput(m.Output())
 	go func() {
-		m.Log().DebugF("Starting command `%s`", command)
+		m.Log().DebugF("Starting command `%s`", event.Cmd)
 		if err := m.cmd.Run(); err != nil {
 			if !ignoreCommandErrors.MatchString(err.Error()) {
 				m.Log().Error(err)
 			}
 		}
-		m.Log().DebugF("Command finished `%s`", command)
+		m.Log().DebugF("Command finished `%s`", event.Cmd)
 		m.clearCommand()
 	}()
 }

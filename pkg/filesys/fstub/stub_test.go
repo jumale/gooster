@@ -1,13 +1,13 @@
 package fstub
 
 import (
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 )
 
 func TestBuilder(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	cfg := Config{}
 
 	t.Run("Add", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestBuilder(t *testing.T) {
 }
 
 func TestStub(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	cfg := Config{}
 
 	t.Run("ReadDir", func(t *testing.T) {
@@ -236,7 +236,7 @@ func TestStub(t *testing.T) {
 }
 
 func assertFiles(t *testing.T, actual map[filePath]*FileStub, expected expectedFiles) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	assert.Len(actual, len(expected))
 
 	for pth, item := range expected {

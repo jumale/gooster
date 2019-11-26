@@ -14,7 +14,7 @@ func (m *Module) handleSetCompletion(event gooster.EventSetCompletion) {
 	m.view.Clear()
 
 	list := event.Completion
-	_, _, width, _ := m.GetRect()
+	_, _, width, _ := m.view.GetRect()
 	cols := numColsForList(list, width)
 	if cols == 0 {
 		return

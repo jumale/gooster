@@ -42,7 +42,7 @@ func (r *YamlReader) Read(jsonPath string, target interface{}) error {
 }
 
 func (r *YamlReader) Load(yamlCfg io.Reader) (err error) {
-	var config, defaults jsonMap
+	var config, defaults yamlMap
 	if err = yaml.NewDecoder(yamlCfg).Decode(&config); err != nil {
 		return errors.WithMessage(err, "Could not decode config")
 	}
@@ -52,7 +52,11 @@ func (r *YamlReader) Load(yamlCfg io.Reader) (err error) {
 		}
 	}
 
-	r.data = mergeConfigs(defaults, config)
+	r.data = mergeConfigs(
+		yamlValToJsonVal(defaults).(jsonMap),
+		yamlValToJsonVal(config).(jsonMap),
+	)
+
 	return nil
 }
 
@@ -100,6 +104,15 @@ func mergeConfigs(a jsonMap, b jsonMap) jsonMap {
 			result[key] = b[key]
 			continue
 		}
+		// just set it if the old value is nil
+		if result[key] == nil {
+			result[key] = b[key]
+			continue
+		}
+		// do nothing if the new value is nil
+		if b[key] == nil {
+			continue
+		}
 		// just set it if new value has a different type
 		if reflect.ValueOf(result[key]).Type() != reflect.ValueOf(b[key]).Type() {
 			result[key] = b[key]
@@ -109,8 +122,6 @@ func mergeConfigs(a jsonMap, b jsonMap) jsonMap {
 		switch b[key].(type) {
 		case jsonMap:
 			result[key] = mergeConfigs(a[key].(jsonMap), b[key].(jsonMap))
-		case yamlMap:
-			result[key] = mergeConfigs(yamlMapToJsonMap(a[key].(yamlMap)), yamlMapToJsonMap(b[key].(yamlMap)))
 		case jsonArr:
 			aVal, aIsArrOfMaps := arrToArrOfMaps(a[key].(jsonArr))
 			bVal, bIsArrOfMaps := arrToArrOfMaps(b[key].(jsonArr))
@@ -128,21 +139,40 @@ func mergeConfigs(a jsonMap, b jsonMap) jsonMap {
 	return result
 }
 
-func yamlMapToJsonMap(m yamlMap) jsonMap {
-	result := make(jsonMap)
-	for key, val := range m {
-		result[fmt.Sprintf("%v", key)] = val
+func yamlValToJsonVal(val interface{}) interface{} {
+	switch typedVal := val.(type) {
+	case jsonMap:
+		newMap := jsonMap{}
+		for key, value := range typedVal {
+			newMap[key] = yamlValToJsonVal(value)
+		}
+		return newMap
+
+	case jsonArr:
+		newArr := make(jsonArr, len(typedVal))
+		for i := range typedVal {
+			newArr[i] = yamlValToJsonVal(typedVal[i])
+		}
+		return newArr
+
+	case yamlMap:
+		newMap := jsonMap{}
+		for key, value := range typedVal {
+			newMap[fmt.Sprintf("%v", key)] = yamlValToJsonVal(value)
+		}
+		return newMap
+
+	default:
+		return val
 	}
-	return result
 }
 
 func arrToArrOfMaps(a jsonArr) (result []jsonMap, success bool) {
+	result = make([]jsonMap, len(a))
 	for i := range a {
 		switch v := a[i].(type) {
 		case jsonMap:
-			result = append(result, v)
-		case yamlMap:
-			result = append(result, yamlMapToJsonMap(v))
+			result[i] = v
 		default:
 			return nil, false
 		}

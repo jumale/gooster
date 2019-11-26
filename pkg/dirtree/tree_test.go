@@ -2,12 +2,12 @@ package dirtree
 
 import (
 	"github.com/jumale/gooster/pkg/filesys/fstub"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestDirTree(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	fsProps := fstub.Config{
 		WorkDir: "/wd",
 		HomeDir: "/hd",

@@ -1,6 +1,9 @@
 package log
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 type Level int
 
@@ -63,6 +66,16 @@ func (l Level) Color() string {
 	default:
 		return "red"
 	}
+}
+
+func (l *Level) UnmarshalJSON(b []byte) error {
+	var name string
+	if err := json.Unmarshal(b, &name); err != nil {
+		return err
+	}
+
+	*l = LevelFromString(name)
+	return nil
 }
 
 func LevelFromString(val string) Level {

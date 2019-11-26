@@ -2,50 +2,62 @@ package complete
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/rivo/tview"
 )
 
-const CompletionView = "completion"
-
 type Config struct {
-	gooster.ModuleConfig `json:",inline"`
-	Colors               ColorsConfig
-	Keys                 KeysConfig
+	Colors ColorsConfig `json:"colors"`
+	Keys   KeysConfig   `json:"keys"`
 }
 
 type ColorsConfig struct {
-	Bg tcell.Color
+	Bg config.Color `json:"bg"`
 }
 
 type KeysConfig struct {
-	NextItem tcell.Key
-	Select   tcell.Key
-}
-
-func NewModule(cfg Config) *Module {
-	return &Module{
-		cfg: cfg,
-	}
+	NextItem config.Key `json:"next_item"`
+	Select   config.Key `json:"select"`
 }
 
 type Module struct {
-	*gooster.BaseModule
+	gooster.Context
 	cfg     Config
 	view    *tview.Table
 	current gooster.EventSetCompletion
 }
 
-func (m *Module) Config() gooster.ModuleConfig {
-	return m.cfg.ModuleConfig
+func NewModule() *Module {
+	return &Module{cfg: Config{
+		Colors: ColorsConfig{
+			Bg: config.Color(tcell.NewHexColor(0x333333)),
+		},
+		Keys: KeysConfig{
+			NextItem: config.Key(tcell.KeyTab),
+			Select:   config.Key(tcell.KeyEnter),
+		},
+	}}
 }
 
-func (m *Module) Init(ctx *gooster.AppContext) error {
-	m.view = tview.NewTable()
-	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, m.view, m.view.Box)
+func (m *Module) Name() string {
+	return "complete"
+}
 
-	m.view.SetBackgroundColor(m.cfg.Colors.Bg)
+func (m *Module) View() gooster.ModuleView {
+	return m.view
+}
+
+func (m *Module) Init(ctx gooster.Context) (err error) {
+	m.Context = ctx
+	if err = ctx.LoadConfig(&m.cfg); err != nil {
+		return err
+	}
+
+	m.view = tview.NewTable()
+
+	m.view.SetBackgroundColor(m.cfg.Colors.Bg.Origin())
 	m.view.SetSelectable(true, true)
 
 	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
@@ -56,9 +68,9 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		return e
 	}))
 
-	m.HandleKeyEvents(gooster.KeyEventHandlers{
-		m.cfg.Keys.NextItem: m.handleNextItem,
-		m.cfg.Keys.Select:   m.handleSelectItem,
+	gooster.HandleKeyEvents(m.view, gooster.KeyEventHandlers{
+		m.cfg.Keys.NextItem.Origin(): m.handleNextItem,
+		m.cfg.Keys.Select.Origin():   m.handleSelectItem,
 	})
 
 	return nil

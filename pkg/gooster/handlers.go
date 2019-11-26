@@ -8,7 +8,7 @@ import (
 
 func (app *App) handleExitEvent() {
 	app.Log().Info("Stopping app")
-	if err := app.AppContext.Close(); err != nil {
+	if err := app.AppContext.close(); err != nil {
 		app.Log().Error(errors.WithMessage(err, "stopping app"))
 	}
 	app.root.Stop()

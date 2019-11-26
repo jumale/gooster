@@ -1,28 +1,26 @@
 package workdir
 
 import (
-	"github.com/gdamore/tcell"
-	"github.com/jumale/gooster/pkg/gooster"
+	"github.com/jumale/gooster/pkg/config"
 )
 
 type Config struct {
-	gooster.ModuleConfig `json:",inline"`
-	InitDir              string       `json:"init_dir"`
-	Colors               ColorsConfig `json:"colors"`
-	Keys                 KeysConfig   `json:"keys"`
+	InitDir string       `json:"init_dir"`
+	Colors  ColorsConfig `json:"colors"`
+	Keys    KeysConfig   `json:"keys"`
 }
 
 type ColorsConfig struct {
-	Bg       tcell.Color `json:"bg"`
-	Graphics tcell.Color `json:"graphics"`
-	Folder   tcell.Color `json:"folder"`
-	File     tcell.Color `json:"file"`
+	Bg       config.Color `json:"bg"`
+	Graphics config.Color `json:"graphics"`
+	Folder   config.Color `json:"folder"`
+	File     config.Color `json:"file"`
 }
 
 type KeysConfig struct {
-	NewFile tcell.Key `json:"new_file"`
-	NewDir  tcell.Key `json:"new_dir"`
-	View    tcell.Key `json:"view"`
-	Delete  tcell.Key `json:"delete"`
-	Open    tcell.Key `json:"open"`
+	NewFile config.Key `json:"new_file"`
+	NewDir  config.Key `json:"new_dir"`
+	View    config.Key `json:"view"`
+	Delete  config.Key `json:"delete"`
+	Open    config.Key `json:"open"`
 }

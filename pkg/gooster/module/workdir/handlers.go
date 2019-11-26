@@ -3,7 +3,6 @@ package workdir
 import (
 	"fmt"
 	"github.com/gdamore/tcell"
-	"github.com/jumale/gooster/pkg/convert"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/jumale/gooster/pkg/dirtree"
 	"github.com/jumale/gooster/pkg/gooster"
@@ -75,19 +74,16 @@ func (m *Module) handleEventCreateDir(event EventCreateDir) {
 }
 
 func (m *Module) handleEventViewFile(event EventViewFile) {
-	path := convert.ToString(event.Path)
-	m.Log().DebugF("viewing file '%s'", path)
+	m.Log().DebugF("viewing file '%s'", event.Path)
 }
 
 func (m *Module) handleEventDelete(event EventDelete) {
-	path := convert.ToString(event.Path)
-
-	nextNode := m.tree.Find(path, dirtree.FindNext)
+	nextNode := m.tree.Find(event.Path, dirtree.FindNext)
 	if nextNode == nil {
-		nextNode = m.tree.Find(path, dirtree.FindPrev)
+		nextNode = m.tree.Find(event.Path, dirtree.FindPrev)
 	}
 
-	if err := m.fs.RemoveAll(path); err != nil {
+	if err := m.fs.RemoveAll(event.Path); err != nil {
 		m.Log().Error(errors.WithMessage(err, "deleting file/directory"))
 		return
 	}

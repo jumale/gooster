@@ -1,12 +1,12 @@
 package command
 
 import (
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestComplete(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	complete := ApplyCompletion
 
 	t.Run("should complete simple command", func(t *testing.T) {

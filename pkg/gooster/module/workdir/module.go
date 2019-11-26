@@ -2,6 +2,7 @@ package workdir
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/dirtree"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/filesys"
@@ -10,19 +11,8 @@ import (
 	"os"
 )
 
-func NewModule(cfg Config) gooster.Module {
-	return newModule(cfg, filesys.Default{})
-}
-
-func newModule(cfg Config, fs filesys.FileSys) *Module {
-	if cfg.InitDir == "" {
-		cfg.InitDir = getWd()
-	}
-	return &Module{cfg: cfg, fs: fs}
-}
-
 type Module struct {
-	*gooster.BaseModule
+	gooster.Context
 	cfg     Config
 	workDir string
 	tree    *dirtree.DirTree
@@ -30,12 +20,51 @@ type Module struct {
 	fs      filesys.FileSys
 }
 
-func (m *Module) Init(ctx *gooster.AppContext) error {
+func NewModule() gooster.Module {
+	return newModule(filesys.Default{})
+}
+
+func newModule(fs filesys.FileSys) *Module {
+	return &Module{
+		fs: fs,
+		cfg: Config{
+			InitDir: getWd(),
+			Colors: ColorsConfig{
+				Bg:       config.Color(tcell.NewHexColor(0x405454)),
+				Graphics: config.Color(tcell.ColorLightSeaGreen),
+				Folder:   config.Color(tcell.ColorLightGreen),
+				File:     config.Color(tcell.ColorLightSteelBlue),
+			},
+			Keys: KeysConfig{
+				NewFile: config.Key(tcell.KeyF2),
+				NewDir:  config.Key(tcell.KeyF7),
+				View:    config.Key(tcell.KeyF3),
+				Delete:  config.Key(tcell.KeyF8),
+				Open:    config.Key(tcell.KeyEnter),
+			},
+		},
+	}
+}
+
+func (m Module) Name() string {
+	return "workdir"
+}
+
+func (m Module) View() gooster.ModuleView {
+	return m.view
+}
+
+func (m *Module) Init(ctx gooster.Context) error {
+	m.Context = ctx
+	if err := ctx.LoadConfig(&m.cfg); err != nil {
+		return err
+	}
+
 	m.tree = dirtree.New(dirtree.Config{
 		Colors: dirtree.ColorsConfig{
-			Root:   m.cfg.Colors.Graphics,
-			Folder: m.cfg.Colors.Folder,
-			File:   m.cfg.Colors.File,
+			Root:   m.cfg.Colors.Graphics.Origin(),
+			Folder: m.cfg.Colors.Folder.Origin(),
+			File:   m.cfg.Colors.File.Origin(),
 		},
 		SetChildren: func(target *tview.TreeNode, children []*dirtree.Node) {
 			m.Events().Dispatch(EventSetChildren{Target: target, Children: children})
@@ -46,8 +75,8 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	m.view.SetRoot(m.tree.Root().TreeNode)
 	m.view.SetCurrentNode(m.tree.Root().TreeNode)
 	m.view.SetBorder(false)
-	m.view.SetBackgroundColor(m.cfg.Colors.Bg)
-	m.view.SetGraphicsColor(m.cfg.Colors.Graphics)
+	m.view.SetBackgroundColor(m.cfg.Colors.Bg.Origin())
+	m.view.SetGraphicsColor(m.cfg.Colors.Graphics.Origin())
 	m.view.SetSelectedFunc(m.tree.ExpandNode)
 
 	m.view.SetKeyBinding(tview.TreeMoveUp, rune(tcell.KeyUp))
@@ -57,8 +86,6 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 	m.view.SetKeyBinding(tview.TreeMoveHome, rune(tcell.KeyHome))
 	m.view.SetKeyBinding(tview.TreeMoveEnd, rune(tcell.KeyEnd))
 	m.view.SetKeyBinding(tview.TreeSelectNode, rune(tcell.KeyLeft), rune(tcell.KeyRight))
-
-	m.BaseModule = gooster.NewBaseModule(m.cfg.ModuleConfig, ctx, m.view, m.view.Box)
 
 	m.Events().Subscribe(events.HandleFunc(func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
@@ -84,12 +111,12 @@ func (m *Module) Init(ctx *gooster.AppContext) error {
 		return e
 	}))
 
-	m.HandleKeyEvents(gooster.KeyEventHandlers{
-		m.cfg.Keys.NewFile: m.handleKeyNewFile,
-		m.cfg.Keys.NewDir:  m.handleKeyNewDir,
-		m.cfg.Keys.View:    m.handleKeyViewFile,
-		m.cfg.Keys.Delete:  m.handleKeyDelete,
-		m.cfg.Keys.Open:    m.handleKeyOpen,
+	gooster.HandleKeyEvents(m.view, gooster.KeyEventHandlers{
+		m.cfg.Keys.NewFile.Origin(): m.handleKeyNewFile,
+		m.cfg.Keys.NewDir.Origin():  m.handleKeyNewDir,
+		m.cfg.Keys.View.Origin():    m.handleKeyViewFile,
+		m.cfg.Keys.Delete.Origin():  m.handleKeyDelete,
+		m.cfg.Keys.Open.Origin():    m.handleKeyOpen,
 	})
 
 	m.Events().Dispatch(EventChangeDir{Path: m.cfg.InitDir})

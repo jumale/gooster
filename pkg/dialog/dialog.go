@@ -1,7 +1,7 @@
 package dialog
 
 import (
-	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/rivo/tview"
 )
 
@@ -14,9 +14,9 @@ type Config struct {
 }
 
 type ColorsConfig struct {
-	Bg        tcell.Color `json:"bg"`
-	Btn       tcell.Color `json:"btn"`
-	BtnActive tcell.Color `json:"btn_active"`
+	Bg        config.Color `json:"bg"`
+	Btn       config.Color `json:"btn"`
+	BtnActive config.Color `json:"btn_active"`
 }
 
 type Context interface {

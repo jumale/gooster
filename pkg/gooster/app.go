@@ -2,9 +2,12 @@ package gooster
 
 import (
 	"github.com/gdamore/tcell"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/pkg/errors"
 	"github.com/rivo/tview"
+	"io"
 )
 
 type App struct {
@@ -12,17 +15,33 @@ type App struct {
 	cfg       AppConfig
 	root      *tview.Application
 	pages     *tview.Pages
-	modules   []Module
+	modules   []moduleDefinition
 	focusMap  map[tcell.Key]tview.Primitive
 	lastFocus tview.Primitive
 }
 
-func NewApp(cfg AppConfig) (*App, error) {
+func NewApp(cfgSource io.Reader, defaultCfgSource io.Reader) (*App, error) {
+	fs := filesys.Default{}
+	configReader := config.NewYamlReader(config.YamlReaderConfig{
+		Fs:       fs,
+		Defaults: defaultCfgSource,
+	})
+	if err := configReader.Load(cfgSource); err != nil {
+		return nil, errors.WithMessage(err, "Failed to load gooster config")
+	}
+
+	appCfg := defaultConfig
+	if err := configReader.Read("$.app", &appCfg); err != nil {
+		return nil, errors.WithMessage(err, "Failed to read app config")
+	}
+
 	root := tview.NewApplication()
 
 	ctx, err := NewAppContext(AppContextConfig{
-		LogLevel:          cfg.LogLevel,
+		LogLevel:          appCfg.LogLevel,
 		DelayEventManager: true,
+		FileSys:           filesys.Default{},
+		ConfigReader:      configReader,
 	})
 	if err != nil {
 		return nil, errors.WithMessage(err, "init app context")
@@ -35,7 +54,7 @@ func NewApp(cfg AppConfig) (*App, error) {
 
 	app := &App{
 		AppContext: ctx,
-		cfg:        cfg,
+		cfg:        appCfg,
 		root:       root,
 		pages:      pages,
 		focusMap:   make(map[tcell.Key]tview.Primitive),
@@ -47,30 +66,10 @@ func NewApp(cfg AppConfig) (*App, error) {
 }
 
 func (app *App) RegisterModule(mod Module, extensions ...Extension) {
-	if err := mod.Init(app.AppContext); err != nil {
-		panic(errors.WithMessage(err, "init module"))
-	}
-
-	for _, ext := range extensions {
-		if !ext.Config().Enabled {
-			continue
-		}
-		if err := ext.Init(mod, app.AppContext); err != nil {
-			panic(errors.WithMessage(err, "init extension"))
-		}
-	}
-
-	cfg := mod.Config()
-	if !cfg.Enabled {
-		return
-	}
-
-	app.modules = append(app.modules, mod)
-	if cfg.FocusKey != 0 {
-		app.focusMap[cfg.FocusKey] = mod
-	}
-
-	app.Log().InfoF("Initialized module [lightgreen]'%T'[-] with config [lightblue]%+v[-]", mod, cfg)
+	app.modules = append(app.modules, moduleDefinition{
+		module:     mod,
+		extensions: extensions,
+	})
 }
 
 func (app *App) Run() {
@@ -102,13 +101,6 @@ func (app *App) Run() {
 		return e
 	}))
 
-	// init key handlers
-	handleKeyEvents(&appInputAdaptor{app.root}, app.withFocusKeys(KeyEventHandlers{
-		tcell.KeyCtrlC:    app.handleKeyCtrlC,
-		tcell.KeyEscape:   app.handleKeyEscape,
-		app.cfg.Keys.Exit: app.handleKeyExit,
-	}))
-
 	// init services and views
 	if em, ok := app.Events().(DelayedEventManager); ok {
 		if err := em.Init(); err != nil {
@@ -116,6 +108,14 @@ func (app *App) Run() {
 		}
 	}
 	app.Events().Dispatch(EventAddTab{Id: initialTabId, View: app.createMainGrid()})
+
+	// init key handlers
+	HandleKeyEvents(app.root, app.withFocusKeys(KeyEventHandlers{
+		tcell.KeyCtrlC:             app.handleKeyCtrlC,
+		tcell.KeyEscape:            app.handleKeyEscape,
+		app.cfg.Keys.Exit.Origin(): app.handleKeyExit,
+	}))
+
 	app.root.SetRoot(app.pages, true)
 
 	// start the app
@@ -131,17 +131,67 @@ func (app *App) createMainGrid() tview.Primitive {
 	grid.SetColumns(app.cfg.Grid.Cols...)
 	grid.SetRows(app.cfg.Grid.Rows...)
 
-	for _, mod := range app.modules {
-		cfg := mod.Config()
-		grid.AddItem(
-			mod,
-			cfg.Row, cfg.Col,
-			cfg.Height, cfg.Width,
-			0, 0,
-			cfg.Focused,
-		)
+	for _, def := range app.modules {
+		mod, cfg, err := app.initModule(def.module, def.extensions...)
+		if err != nil {
+			panic(err)
+		}
+
+		focusKey := cfg.FocusKey.Origin()
+		if focusKey != 0 {
+			app.focusMap[focusKey] = mod.View()
+		}
+
+		if mod != nil {
+			grid.AddItem(
+				mod.View(),
+				cfg.Row, cfg.Col,
+				cfg.Height, cfg.Width,
+				0, 0,
+				cfg.Focused,
+			)
+		}
+
 	}
 	return grid
+}
+
+func (app *App) initModule(mod Module, extensions ...Extension) (Module, *ModuleConfig, error) {
+	modCtx := app.AppContext.forModule(mod)
+	modCfg := defaultModConfig
+	err := modCtx.LoadConfig(&modCfg)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "Failed to load config for module %T", mod)
+	}
+
+	err = mod.Init(modCtx)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "Failed to init module %T", mod)
+	}
+	for _, ext := range extensions {
+		extCtx := app.AppContext.forExtension(ext, mod)
+
+		extCfg := defaultExtConfig
+		err = extCtx.LoadConfig(&extCfg)
+		if err != nil {
+			return nil, nil, errors.WithMessagef(err, "Failed to load config for extension %T of module %T", ext, mod)
+		}
+
+		if !extCfg.Enabled {
+			continue
+		}
+
+		if err = ext.Init(mod, extCtx); err != nil {
+			return nil, nil, errors.WithMessagef(err, "Failed to init extension %T of module %T", ext, mod)
+		}
+	}
+
+	if modCfg.FocusKey != 0 {
+		app.focusMap[modCfg.FocusKey.Origin()] = mod.View()
+	}
+
+	app.Log().InfoF("Initialized module [lightgreen]'%T'[-] with config [lightblue]%+v[-]", mod, modCfg)
+	return mod, &modCfg, nil
 }
 
 // withFocusKeys adds handles for every focus key
@@ -154,4 +204,9 @@ func (app *App) withFocusKeys(keyHandlers KeyEventHandlers) KeyEventHandlers {
 		}
 	}
 	return keyHandlers
+}
+
+type moduleDefinition struct {
+	module     Module
+	extensions []Extension
 }

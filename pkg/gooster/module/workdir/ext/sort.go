@@ -10,31 +10,29 @@ import (
 	"strings"
 )
 
-type SortMode uint8
-
-const (
-	SortByType SortMode = 1 << iota
-	SortDesc
-)
-
 type SortTreeConfig struct {
-	gooster.ExtensionConfig
-	Mode SortMode
+	Mode SortMode `json:"mode"`
 }
 
 type SortTree struct {
 	cfg SortTreeConfig
 }
 
-func NewSortTree(cfg SortTreeConfig) gooster.Extension {
-	return &SortTree{cfg: cfg}
+func NewSortTree() gooster.Extension {
+	return &SortTree{cfg: SortTreeConfig{
+		Mode: SortByType,
+	}}
 }
 
-func (ext *SortTree) Config() gooster.ExtensionConfig {
-	return ext.cfg.ExtensionConfig
+func (ext *SortTree) Name() string {
+	return "sort"
 }
 
-func (ext *SortTree) Init(m gooster.Module, ctx *gooster.AppContext) error {
+func (ext *SortTree) Init(_ gooster.Module, ctx gooster.Context) error {
+	if err := ctx.LoadConfig(&ext.cfg); err != nil {
+		return err
+	}
+
 	ctx.Events().Subscribe(events.HandleWithPrio(100, func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
 		case workdir.EventSetChildren:

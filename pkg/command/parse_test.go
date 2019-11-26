@@ -1,12 +1,12 @@
 package command
 
 import (
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestBashCompletion(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	parse := ParseCommands
 
 	t.Run("should parse command with mixed quotes", func(t *testing.T) {

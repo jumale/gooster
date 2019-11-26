@@ -3,7 +3,7 @@ package ext
 import (
 	"github.com/jumale/gooster/pkg/dirtree"
 	"github.com/jumale/gooster/pkg/filesys/fstub"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -11,7 +11,7 @@ type Input []*dirtree.Node
 type Expected []string
 
 func TestSortExtension(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	filesAndDirs := Input{
 		file("ccc.txt"),

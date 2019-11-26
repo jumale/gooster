@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/rivo/tview"
@@ -9,7 +10,11 @@ import (
 type Align int
 
 func (a *Align) UnmarshalJSON(b []byte) error {
-	val := string(b)
+	var val string
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+
 	switch val {
 	case "left":
 		*a = tview.AlignLeft
@@ -21,4 +26,8 @@ func (a *Align) UnmarshalJSON(b []byte) error {
 		return errors.New(fmt.Sprintf("Unknown align value '%s'. Expected: left, right, center", val))
 	}
 	return nil
+}
+
+func (a Align) Origin() int {
+	return int(a)
 }

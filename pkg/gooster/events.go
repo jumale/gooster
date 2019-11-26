@@ -7,9 +7,15 @@ import (
 	"github.com/rivo/tview"
 )
 
+type DelayedEventManager interface {
+	Init() error
+}
+
 type DrawableEvent interface {
 	NeedsDraw() bool
 }
+
+// ------------------------------------------------------------ //
 
 type EventExit struct{}
 

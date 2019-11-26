@@ -3,7 +3,7 @@ package config
 import (
 	"bytes"
 	"github.com/jumale/gooster/pkg/filesys/fstub"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -28,10 +28,10 @@ modules:
 `
 
 func TestYamlReader(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	t.Run("Load", func(t *testing.T) {
-		t.Run("should ...", func(t *testing.T) {
+		t.Run("should load a config file", func(t *testing.T) {
 			fs := fstub.New(fstub.Config{})
 			fs.Root().Add("/config.yaml", fstub.NewFile(customConfig))
 			reader := NewYamlReader(YamlReaderConfig{Fs: fs, Defaults: bytes.NewBufferString(defaultConfig)})
@@ -39,27 +39,33 @@ func TestYamlReader(t *testing.T) {
 			err := reader.LoadFile("/config.yaml")
 			assert.NoError(err)
 
-			appConfig := &appCfg{}
-			err = reader.Read("$.app", appConfig)
-			assert.NoError(err)
-			assert.Equal("custom_name", appConfig.Name)
-			assert.Equal(true, appConfig.Debug)
+			t.Run("then Read", func(t *testing.T) {
+				t.Run("should read the corresponding configs", func(t *testing.T) {
+					appConfig := &appCfg{}
+					err = reader.Read("$.app", appConfig)
+					assert.NoError(err)
+					assert.Equal("custom_name", appConfig.Name)
+					assert.Equal(true, appConfig.Debug)
 
-			fooConfig := &moduleCfg{}
-			err = reader.Read("$.modules[?(@.#id == 'foo')][0]", fooConfig)
-			assert.NoError(err)
-			assert.Equal(true, fooConfig.Enabled)
+					fooConfig := &moduleCfg{}
+					err = reader.Read("$.modules[?(@.#id == 'foo')][0]", fooConfig)
+					assert.NoError(err)
+					assert.Equal(true, fooConfig.Enabled)
 
-			barConfig := &moduleCfg{}
-			err = reader.Read("$.modules[?(@.#id == 'bar')][0]", barConfig)
-			assert.NoError(err)
-			assert.Equal(true, barConfig.Enabled)
+					barConfig := &moduleCfg{}
+					err = reader.Read("$.modules[?(@.#id == 'bar')][0]", barConfig)
+					assert.NoError(err)
+					assert.Equal(true, barConfig.Enabled)
+				})
+			})
 		})
+
+		// @todo: test converting yaml maps to json maps
 	})
 }
 
 func TestMergeConfigs(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	t.Run("should just take 'a' values, if 'b' is empty", func(t *testing.T) {
 		a := jsonMap{"foo": "bar"}
@@ -87,12 +93,6 @@ func TestMergeConfigs(t *testing.T) {
 		a := jsonMap{"foo": jsonMap{"bar": jsonMap{"baz": 123}, "cat": "sad"}}
 		b := jsonMap{"foo": jsonMap{"bar": jsonMap{"baz": 456}}}
 		assert.Equal(jsonMap{"foo": jsonMap{"bar": jsonMap{"baz": 456}, "cat": "sad"}}, mergeConfigs(a, b))
-	})
-
-	t.Run("should convert yaml-maps to json-maps and correctly merge them by keys", func(t *testing.T) {
-		a := jsonMap{"foo": yamlMap{"bar": yamlMap{"123": 456}, "cat": "sad"}}
-		b := jsonMap{"foo": yamlMap{"bar": yamlMap{123: 789}}}
-		assert.Equal(jsonMap{"foo": jsonMap{"bar": jsonMap{"123": 789}, "cat": "sad"}}, mergeConfigs(a, b))
 	})
 
 	t.Run("should override value if types do not match", func(t *testing.T) {
@@ -127,10 +127,22 @@ func TestMergeConfigs(t *testing.T) {
 		}}
 		assert.Equal(expected, mergeConfigs(a, b))
 	})
+
+	t.Run("should override nil values", func(t *testing.T) {
+		a := jsonMap{"foo": nil}
+		b := jsonMap{"foo": "bar"}
+		assert.Equal(jsonMap{"foo": "bar"}, mergeConfigs(a, b))
+	})
+
+	t.Run("should skip if new value is nil", func(t *testing.T) {
+		a := jsonMap{"foo": "bar"}
+		b := jsonMap{"foo": nil}
+		assert.Equal(jsonMap{"foo": "bar"}, mergeConfigs(a, b))
+	})
 }
 
 func TestMergeArrOfMaps(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	t.Run("should just take 'a' values if 'b' is empty", func(t *testing.T) {
 		a := []jsonMap{{"foo": "bar"}}
@@ -202,7 +214,7 @@ func TestMergeArrOfMaps(t *testing.T) {
 }
 
 func TestReadJsonPath(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	t.Run("should read value to the target", func(t *testing.T) {
 		data := jsonMap{
@@ -235,6 +247,19 @@ func TestReadJsonPath(t *testing.T) {
 
 		assert.Equal("dog", target.Name)
 		assert.Equal(false, target.Meows)
+	})
+
+	t.Run("should keep default data if no config provided", func(t *testing.T) {
+		data := jsonMap{
+			"parent": jsonMap{"meows": true},
+		}
+		target := &ReadTarget{Name: "bat"}
+
+		err := readJsonPath(data, "$.parent", target)
+		assert.NoError(err)
+
+		assert.Equal("bat", target.Name)
+		assert.Equal(true, target.Meows)
 	})
 }
 

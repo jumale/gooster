@@ -22,7 +22,7 @@ type Base struct {
 
 func (b Base) CreateBox(content tview.Primitive, cfg Config, onDone ActionHandler) tview.Primitive {
 	box := tview.NewGrid()
-	box.SetBackgroundColor(cfg.Colors.Bg)
+	box.SetBackgroundColor(cfg.Colors.Bg.Origin())
 	if b.Border {
 		box.SetBorder(true)
 	}
@@ -83,13 +83,13 @@ func (b Base) CreateBox(content tview.Primitive, cfg Config, onDone ActionHandle
 
 func (b Base) initForm(form *tview.Form, cfg Config, onDone ActionHandler) {
 	form.SetBorderPadding(0, 0, 0, 0)
-	form.SetBackgroundColor(cfg.Colors.Bg)
+	form.SetBackgroundColor(cfg.Colors.Bg.Origin())
 
 	if len(b.Buttons) > 0 {
 		_, _, w, h := form.GetRect()
 		form.SetRect(0, 0, w, h+buttonHeight)
 
-		form.SetButtonBackgroundColor(cfg.Colors.Bg)
+		form.SetButtonBackgroundColor(cfg.Colors.Bg.Origin())
 		form.SetButtonsAlign(tview.AlignRight)
 
 		for _, btn := range b.Buttons {

@@ -2,12 +2,12 @@ package prompt
 
 import (
 	"github.com/jumale/gooster/pkg/filesys/fstub"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
 func TestDetectWorkDirPath(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	fsProps := fstub.Config{
 		WorkDir: "/work/dir",
 		HomeDir: "/home/dir",

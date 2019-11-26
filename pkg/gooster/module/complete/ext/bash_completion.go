@@ -9,7 +9,6 @@ import (
 type Completions = []string
 
 type BashCompletionConfig struct {
-	gooster.ExtensionConfig
 	Completer command.BashCompleterConfig
 }
 
@@ -18,18 +17,27 @@ type BashCompletion struct {
 	completer *command.BashCompleter
 }
 
-func NewBashCompletion(cfg BashCompletionConfig) gooster.Extension {
+func NewBashCompletion() gooster.Extension {
 	return &BashCompletion{
-		cfg:       cfg,
-		completer: command.NewBashCompleter(cfg.Completer),
+		cfg: BashCompletionConfig{
+			Completer: command.BashCompleterConfig{
+				CompleteBin: "complete",
+				CompgenBin:  "compgen",
+			},
+		},
 	}
 }
 
-func (b *BashCompletion) Config() gooster.ExtensionConfig {
-	return b.cfg.ExtensionConfig
+func (ext *BashCompletion) Name() string {
+	return "bash_completion"
 }
 
-func (b *BashCompletion) Init(_ gooster.Module, ctx *gooster.AppContext) error {
+func (ext *BashCompletion) Init(_ gooster.Module, ctx gooster.Context) error {
+	if err := ctx.LoadConfig(&ext.cfg); err != nil {
+		return err
+	}
+	ext.completer = command.NewBashCompleter(ext.cfg.Completer)
+
 	ctx.Events().Subscribe(events.HandleWithPrio(10, func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
 		case gooster.EventSetCompletion:
@@ -43,7 +51,7 @@ func (b *BashCompletion) Init(_ gooster.Module, ctx *gooster.AppContext) error {
 			}
 
 			var err error
-			if event.Completion, err = b.completer.Get(event.Commands[len(event.Commands)-1]); err != nil {
+			if event.Completion, err = ext.completer.Get(event.Commands[len(event.Commands)-1]); err != nil {
 				ctx.Log().Debug(err)
 			}
 			return event

@@ -2,7 +2,7 @@ package prompt
 
 import (
 	"github.com/gdamore/tcell"
-	"github.com/jumale/gooster/pkg/filesys"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/filesys/fstub"
 	tools "github.com/jumale/gooster/pkg/gooster/test_tools"
 	"testing"
@@ -13,11 +13,11 @@ func TestModule(t *testing.T) {
 	promptLabel := ">> "
 	withLabel := func(v string) string { return promptLabel + v }
 	colors := ColorsConfig{
-		Bg:      tcell.ColorDefault,
-		Label:   tcell.ColorDefault,
-		Text:    tcell.ColorDefault,
-		Divider: tcell.ColorDefault,
-		Command: tcell.ColorDefault,
+		Bg:      config.Color(tcell.ColorDefault),
+		Label:   config.Color(tcell.ColorDefault),
+		Text:    config.Color(tcell.ColorDefault),
+		Divider: config.Color(tcell.ColorDefault),
+		Command: config.Color(tcell.ColorDefault),
 	}
 
 	cfg := Config{
@@ -25,20 +25,16 @@ func TestModule(t *testing.T) {
 		FieldWidth: 0,
 		Colors:     colors,
 	}
-	fsProps := fstub.Config{
-		WorkDir: "/wd",
-		HomeDir: "/hd",
-	}
-	fs := fstub.New(fsProps)
 
-	init := func(t *testing.T, cfg Config, fs filesys.FileSys) *tools.ModuleTester {
-		m := tools.NewModuleTester(t, newModule(cfg, fs))
+	init := func(t *testing.T, cfg Config) *tools.ModuleTester {
+		m := tools.NewModuleTester(t, NewModule(), cfg)
 		m.SetSize(10, 1)
+		m.AssertInited()
 		return m
 	}
 
 	t.Run("should display the sent prompt", func(t *testing.T) {
-		module := init(t, cfg, fs)
+		module := init(t, cfg)
 
 		module.SendEvent(EventSetPrompt{Input: "foo bar"})
 		module.AssertView(withLabel("foo bar"))
@@ -49,28 +45,17 @@ func TestModule(t *testing.T) {
 		})
 	})
 
-	t.Run("should use a default label if not configured (or empty)", func(t *testing.T) {
-		cfg := Config{
-			Label:  "",
-			Colors: colors,
-		}
-		module := init(t, cfg, fs)
-
-		module.Draw()
-		module.AssertView(" >")
-	})
-
 	t.Run("should print the command and divider if configured", func(t *testing.T) {
 		cfg := Config{
 			Label:        promptLabel,
 			PrintCommand: true,
 			PrintDivider: true,
 			Colors: ColorsConfig{
-				Divider: tcell.ColorRed,
-				Command: tcell.ColorBlue,
+				Divider: config.Color(tcell.ColorRed),
+				Command: config.Color(tcell.ColorBlue),
 			},
 		}
-		module := init(t, cfg, fs)
+		module := init(t, cfg)
 
 		module.SendEvent(EventExecCommand{Cmd: `echo "foo"`})
 		time.Sleep(100 * time.Millisecond)
@@ -83,7 +68,7 @@ func TestModule(t *testing.T) {
 	})
 
 	t.Run("should run command with user input", func(t *testing.T) {
-		module := init(t, cfg, fs)
+		module := init(t, cfg)
 		module.SendEvent(EventExecCommand{Cmd: "bash ./testdata/prompt.sh"})
 
 		time.Sleep(100 * time.Millisecond)
@@ -108,34 +93,31 @@ func TestModule(t *testing.T) {
 		FieldWidth:  10,
 		HistoryFile: "/history",
 		Keys: KeysConfig{
-			HistoryPrev: tcell.KeyUp,
-			HistoryNext: tcell.KeyDown,
+			HistoryPrev: config.Key(tcell.KeyUp),
+			HistoryNext: config.Key(tcell.KeyDown),
 		},
 	}
-	fsWithHistory := fstub.New(fsProps)
-	fsWithHistory.Root().Add("/history", fstub.NewFile(
-		"foo",
-		"bar",
-		"baz",
-	))
 
 	t.Run("should navigate history", func(t *testing.T) {
-		module := init(t, cfgWithHistory, fsWithHistory)
+		module := tools.NewModuleTester(t, NewModule(), cfgWithHistory)
+		module.SetSize(10, 1)
+		module.Fs.Root().Add("/history", fstub.NewFile("foo", "bar", "baz"))
+		module.AssertInited()
 
 		module.Draw()
 		module.SendEvent(EventSetPrompt{Input: "init"})
 		module.AssertView(withLabel("init"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryPrev)
+		module.PressKey(cfgWithHistory.Keys.HistoryPrev.Origin())
 		module.AssertView(withLabel("baz"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryPrev)
+		module.PressKey(cfgWithHistory.Keys.HistoryPrev.Origin())
 		module.AssertView(withLabel("bar"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryNext)
+		module.PressKey(cfgWithHistory.Keys.HistoryNext.Origin())
 		module.AssertView(withLabel("baz"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryNext)
+		module.PressKey(cfgWithHistory.Keys.HistoryNext.Origin())
 		module.AssertView(withLabel("init"))
 	})
 
@@ -144,13 +126,13 @@ func TestModule(t *testing.T) {
 			Label:      promptLabel,
 			FieldWidth: 10,
 			Colors: ColorsConfig{
-				Bg:    tcell.ColorRed,
-				Label: tcell.ColorGreen,
-				Text:  tcell.ColorBlue,
+				Bg:    config.Color(tcell.ColorRed),
+				Label: config.Color(tcell.ColorGreen),
+				Text:  config.Color(tcell.ColorBlue),
 			},
 		}
 
-		module := init(t, cfg, fs)
+		module := init(t, cfg)
 
 		module.SendEvent(EventSetPrompt{Input: "foo bar"})
 		module.AssertView("[green:red]>> [blue]foo bar")

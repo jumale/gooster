@@ -24,7 +24,7 @@ type Manager struct {
 	fs       filesys.FileSys
 }
 
-func NewManager(cfg Config) *Manager {
+func NewManager(cfg Config) (*Manager, error) {
 	if cfg.FileSys == nil {
 		cfg.FileSys = filesys.Default{}
 	}
@@ -45,12 +45,14 @@ func NewManager(cfg Config) *Manager {
 	}
 	mng.filePath = cfg.HistoryFile
 	if mng.filePath != "" {
-		mng.loadHistoryLines(mng.filePath)
+		if err := mng.loadHistoryLines(mng.filePath); err != nil {
+			return nil, err
+		}
 	}
 
 	mng.Reset()
 
-	return mng
+	return mng, nil
 }
 
 func (h *Manager) Add(cmd string) {
@@ -155,10 +157,10 @@ func (h *Manager) Filter(search string) []string {
 	return found
 }
 
-func (h *Manager) loadHistoryLines(filePath string) *Manager {
+func (h *Manager) loadHistoryLines(filePath string) error {
 	f, err := h.fs.Open(filePath)
 	if err != nil {
-		h.log.Error(errors.WithMessage(err, "loading bash history file"))
+		return errors.WithMessage(err, "loading bash history file")
 	}
 	defer func() {
 		if err := f.Close(); err != nil {
@@ -171,7 +173,7 @@ func (h *Manager) loadHistoryLines(filePath string) *Manager {
 		h.add(sc.Text())
 	}
 
-	return h
+	return nil
 }
 
 func (h *Manager) write(cmd string) {

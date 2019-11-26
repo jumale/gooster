@@ -4,28 +4,40 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/filesys/fstub"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/log"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 )
 
-func NewExtensionTester(t *testing.T, ext gooster.Extension, target gooster.Module) *ExtensionTester {
-	ctx, logs := TestableContext()
-	err := ext.Init(target, ctx)
-	if err != nil {
-		panic(errors.WithMessagef(err, "could not init extension %T", ext))
-	}
+type ExtensionTester struct {
+	*gooster.AppContext
+	Extension    gooster.Extension
+	Target       gooster.Module
+	ConfigReader *ConfigReader
+	Fs           *fstub.Stub
+	logs         *bytes.Buffer
+	assert       *require.Assertions
+	events       []events.IEvent
+}
+
+func NewExtensionTester(t *testing.T, ext gooster.Extension, target gooster.Module, cfg interface{}) *ExtensionTester {
+	ctx, fs, cfgReader, logs := TestableContext()
+	ctx.SetCfgPath(ext.Name())
+	cfgReader.ShouldReturn(ext.Name(), cfg)
 
 	tester := &ExtensionTester{
-		AppContext: ctx,
-		ext:        ext,
-		logs:       logs,
-		assert:     assert.New(t),
+		Extension:    ext,
+		Target:       target,
+		AppContext:   ctx,
+		ConfigReader: cfgReader,
+		Fs:           fs,
+		logs:         logs,
+		assert:       require.New(t),
 	}
 
 	ctx.Events().Subscribe(events.HandleWithPrio(events.AfterAllOtherChanges, func(e events.IEvent) events.IEvent {
@@ -36,12 +48,12 @@ func NewExtensionTester(t *testing.T, ext gooster.Extension, target gooster.Modu
 	return tester
 }
 
-type ExtensionTester struct {
-	*gooster.AppContext
-	ext    gooster.Extension
-	logs   *bytes.Buffer
-	assert *assert.Assertions
-	events []events.IEvent
+func (t *ExtensionTester) Init() error {
+	return t.Extension.Init(t.Target, t.AppContext)
+}
+
+func (t *ExtensionTester) AssertInited() {
+	t.assert.NoError(t.Extension.Init(t.Target, t.AppContext))
 }
 
 //func (t *ModuleTester) PressKey(key tcell.Key, r ...rune) *ModuleTester {

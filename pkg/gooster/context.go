@@ -2,25 +2,39 @@ package gooster
 
 import (
 	"fmt"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/filesys"
 	"github.com/jumale/gooster/pkg/log"
 	"github.com/pkg/errors"
 	"io"
 	"os"
+	"strings"
 )
+
+type Context interface {
+	LoadConfig(target interface{}) error
+	Log() log.Logger
+	Events() events.Manager
+	Output() *output
+	Fs() filesys.FileSys
+}
 
 type AppContextConfig struct {
 	LogLevel          log.Level
 	LogFormat         string
 	LogTarget         io.Writer
 	DelayEventManager bool
+	ConfigReader      config.Reader
+	FileSys           filesys.FileSys
 }
 
 type AppContext struct {
-	cfg AppContextConfig
-	log log.Logger
-	em  events.Manager
-	out *output
+	cfg     AppContextConfig
+	log     log.Logger
+	em      events.Manager
+	out     *output
+	cfgPath string
 }
 
 func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
@@ -46,21 +60,24 @@ func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
 
 	output := &output{em}
 
-	var logTarget io.Writer = output
-	if cfg.LogTarget != nil {
-		logTarget = cfg.LogTarget
+	if cfg.LogTarget == nil {
+		cfg.LogTarget = output
 	}
-
-	logger = log.NewSimpleLogger(logTarget, log.SimpleLoggerConfig{
+	logger = log.NewSimpleLogger(cfg.LogTarget, log.SimpleLoggerConfig{
 		Level:  cfg.LogLevel,
 		Format: cfg.LogFormat,
 	})
 
+	if cfg.FileSys == nil {
+		cfg.FileSys = filesys.Default{}
+	}
+
 	ctx = &AppContext{
-		cfg: cfg,
-		em:  em,
-		log: logger,
-		out: output,
+		cfgPath: "$",
+		cfg:     cfg,
+		em:      em,
+		log:     logger,
+		out:     output,
 	}
 
 	return ctx, nil
@@ -68,8 +85,8 @@ func NewAppContext(cfg AppContextConfig) (ctx *AppContext, err error) {
 
 // ------------------------------------------------------------ //
 
-func (ctx *AppContext) GetConfig(jsonPath string, target interface{}) error {
-	return nil
+func (ctx *AppContext) LoadConfig(target interface{}) error {
+	return ctx.cfg.ConfigReader.Read(ctx.cfgPath, target)
 }
 
 func (ctx *AppContext) Log() log.Logger {
@@ -84,7 +101,40 @@ func (ctx *AppContext) Output() *output {
 	return ctx.out
 }
 
-func (ctx *AppContext) Close() error {
+func (ctx *AppContext) Fs() filesys.FileSys {
+	return ctx.cfg.FileSys
+}
+
+// ------------------------------------------------------------ //
+
+func (ctx *AppContext) SetCfgPath(path string) {
+	ctx.cfgPath = path
+}
+
+const (
+	moduleCfgPath = "modules[?(@.#id == '%s')][0]"
+	extCfgPath    = "extensions[?(@.#id == '%s')][0]"
+)
+
+func (ctx *AppContext) forModule(mod Module) *AppContext {
+	newCtx := *ctx
+	newCtx.cfgPath = joinPath("$", fmt.Sprintf(moduleCfgPath, mod.Name()))
+	return &newCtx
+}
+
+func (ctx *AppContext) forExtension(ext Extension, target Module) *AppContext {
+	newCtx := *ctx
+	newCtx.cfgPath = joinPath("$", fmt.Sprintf(moduleCfgPath, target.Name()), fmt.Sprintf(extCfgPath, ext.Name()))
+	return &newCtx
+}
+
+func joinPath(vals ...string) string {
+	return strings.Join(vals, ".")
+}
+
+// ------------------------------------------------------------ //
+
+func (ctx *AppContext) close() error {
 	ctx.log.Info("Closing context")
 
 	// substitute logger with an stdout logger,
@@ -108,12 +158,6 @@ func (ctx *AppContext) closeService(s interface{}) error {
 		}
 	}
 	return nil
-}
-
-// ------------------------------------------------------------ //
-
-type DelayedEventManager interface {
-	Init() error
 }
 
 // ------------------------------------------------------------ //

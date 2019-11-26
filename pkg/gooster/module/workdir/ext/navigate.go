@@ -12,7 +12,6 @@ import (
 )
 
 type TypingSearchConfig struct {
-	gooster.ExtensionConfig
 	KeyPressInterval time.Duration `json:"key_press_interval"`
 }
 
@@ -22,19 +21,24 @@ type TypingSearch struct {
 	timer    *time.Timer
 	cfg      TypingSearchConfig
 	sync.Mutex
-	*gooster.AppContext
+	gooster.Context
 }
 
-func NewTypingSearch(cfg TypingSearchConfig) gooster.Extension {
-	return &TypingSearch{cfg: cfg}
+func NewTypingSearch() gooster.Extension {
+	return &TypingSearch{cfg: TypingSearchConfig{
+		KeyPressInterval: 400 * time.Millisecond,
+	}}
 }
 
-func (ext *TypingSearch) Config() gooster.ExtensionConfig {
-	return ext.cfg.ExtensionConfig
+func (ext *TypingSearch) Name() string {
+	return "navigate"
 }
 
-func (ext *TypingSearch) Init(m gooster.Module, ctx *gooster.AppContext) error {
-	ext.AppContext = ctx
+func (ext *TypingSearch) Init(m gooster.Module, ctx gooster.Context) error {
+	ext.Context = ctx
+	if err := ctx.LoadConfig(&ext.cfg); err != nil {
+		return err
+	}
 
 	ext.Events().Subscribe(events.HandleWithPrio(-100, func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
@@ -46,8 +50,8 @@ func (ext *TypingSearch) Init(m gooster.Module, ctx *gooster.AppContext) error {
 		return e
 	}))
 
-	prev := m.GetInputCapture()
-	m.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	prev := m.View().GetBox().GetInputCapture()
+	m.View().GetBox().SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		ext.navigate(event)
 		return prev(event)
 	})

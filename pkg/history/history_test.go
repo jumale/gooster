@@ -2,13 +2,13 @@ package history
 
 import (
 	"github.com/jumale/gooster/pkg/filesys/fstub"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"path"
 	"testing"
 )
 
 func TestHistory(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	fsProps := fstub.Config{
 		WorkDir: "/wd",
 		HomeDir: "/hd",
@@ -19,7 +19,8 @@ func TestHistory(t *testing.T) {
 
 	t.Run("Constructor", func(t *testing.T) {
 		t.Run("should create a new clean manager", func(t *testing.T) {
-			mng := NewManager(Config{FileSys: newFs()})
+			mng, err := NewManager(Config{FileSys: newFs()})
+			assert.NoError(err)
 			assert.Equal("", mng.filePath)
 			assert.Len(mng.stack, 0)
 			assert.Len(mng.set, 0)
@@ -29,7 +30,8 @@ func TestHistory(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add("foo/bar.txt", fstub.NewFile("foo", "bar"))
 
-			mng := NewManager(Config{HistoryFile: "foo/bar.txt", FileSys: fs})
+			mng, err := NewManager(Config{HistoryFile: "foo/bar.txt", FileSys: fs})
+			assert.NoError(err)
 
 			assert.Equal([]string{"foo", "bar"}, mng.stack)
 			assert.Contains(mng.set, "foo")
@@ -42,12 +44,19 @@ func TestHistory(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add(homeFilePath, fstub.NewFile("foo", "bar"))
 
-			mng := NewManager(Config{HistoryFile: "~/foo/bar.txt", FileSys: fs})
+			mng, err := NewManager(Config{HistoryFile: "~/foo/bar.txt", FileSys: fs})
+			assert.NoError(err)
 
 			assert.Equal([]string{"foo", "bar"}, mng.stack)
 			assert.Contains(mng.set, "foo")
 			assert.Contains(mng.set, "bar")
 			assert.True(fs.Get(homeFilePath).Closed)
+		})
+
+		t.Run("should return error if not possible to load the history file", func(t *testing.T) {
+			mng, err := NewManager(Config{HistoryFile: "foo/bar.txt", FileSys: newFs()})
+			assert.Error(err)
+			assert.Nil(mng)
 		})
 	})
 
@@ -57,7 +66,8 @@ func TestHistory(t *testing.T) {
 		t.Run("should add new commands at the end of history", func(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add(file, fstub.NewFile("foo"))
-			mng := NewManager(Config{HistoryFile: file, FileSys: fs})
+			mng, err := NewManager(Config{HistoryFile: file, FileSys: fs})
+			assert.NoError(err)
 
 			assert.Equal([]string{"foo"}, mng.stack)
 			assert.Contains(mng.set, "foo")
@@ -78,7 +88,8 @@ func TestHistory(t *testing.T) {
 			fs := newFs()
 			fs.Root().Add(file, fstub.NewFile("foo"))
 
-			mng := NewManager(Config{HistoryFile: file, FileSys: fs})
+			mng, err := NewManager(Config{HistoryFile: file, FileSys: fs})
+			assert.NoError(err)
 			assert.Equal([]string{"foo"}, fs.Get(file).ContentLines())
 
 			mng.Add("bar")
@@ -90,7 +101,10 @@ func TestHistory(t *testing.T) {
 		fs := newFs()
 		fs.Root().Add("history.txt", fstub.NewFile(lines...))
 
-		return NewManager(Config{HistoryFile: "history.txt", FileSys: fs})
+		mng, err := NewManager(Config{HistoryFile: "history.txt", FileSys: fs})
+		assert.NoError(err)
+
+		return mng
 	}
 
 	t.Run("Next", func(t *testing.T) {

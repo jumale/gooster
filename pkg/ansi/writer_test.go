@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 )
 
 func TestAsciiToTviewColors(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	write := createWriteTester(t, WriterConfig{
 		DefaultFg: tcell.ColorDefault,
@@ -85,7 +85,7 @@ func TestAsciiToTviewColors(t *testing.T) {
 }
 
 func createWriteTester(t *testing.T, cfg WriterConfig) func(string) string {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	return func(v string) string {
 		data := []byte(v)

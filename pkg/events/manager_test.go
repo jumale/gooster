@@ -2,7 +2,7 @@ package events
 
 import (
 	"fmt"
-	_assert "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -17,7 +17,7 @@ type Event struct {
 }
 
 func TestConstructor(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	t.Run("should create a new instance of manager interface", func(t *testing.T) {
 		mng, err := NewManager(ManagerConfig{})
 		assert.NoError(err)
@@ -26,7 +26,7 @@ func TestConstructor(t *testing.T) {
 }
 
 func TestSubscribe(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	cfg := ManagerConfig{}
 
 	t.Run("should do nothing if there are no subscribers", func(t *testing.T) {
@@ -108,7 +108,7 @@ func TestSubscribe(t *testing.T) {
 }
 
 func TestExtendEvents(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 	cfg := ManagerConfig{}
 
 	t.Run("should extend events and modify event data before dispatching it", func(t *testing.T) {
@@ -151,7 +151,7 @@ func TestExtendEvents(t *testing.T) {
 }
 
 func TestDelayedStart(t *testing.T) {
-	assert := _assert.New(t)
+	assert := require.New(t)
 
 	t.Run("should consume events immediately if delay is not defined", func(t *testing.T) {
 		cfg := ManagerConfig{}

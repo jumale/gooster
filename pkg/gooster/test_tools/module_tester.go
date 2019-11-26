@@ -5,34 +5,45 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/events"
+	"github.com/jumale/gooster/pkg/filesys/fstub"
 	"github.com/jumale/gooster/pkg/gooster"
 	"github.com/jumale/gooster/pkg/log"
-	"github.com/pkg/errors"
 	"github.com/pmezard/go-difflib/difflib"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
 )
 
-func NewModuleTester(t *testing.T, m gooster.Module) *ModuleTester {
-	ctx, logs := TestableContext()
-	err := m.Init(ctx)
-	if err != nil {
-		panic(errors.WithMessagef(err, "could not init module %T", m))
-	}
+type ModuleTester struct {
+	*gooster.AppContext
+	Module       gooster.Module
+	ConfigReader *ConfigReader
+	Fs           *fstub.Stub
+	screen       *screenStub
+	output       *bytes.Buffer
+	logs         *bytes.Buffer
+	assert       *require.Assertions
+}
+
+func NewModuleTester(t *testing.T, m gooster.Module, cfg interface{}) *ModuleTester {
+	ctx, fs, cfgReader, logs := TestableContext()
+	ctx.SetCfgPath(m.Name())
+	cfgReader.ShouldReturn(m.Name(), cfg)
 
 	tester := &ModuleTester{
-		AppContext: ctx,
-		module:     m,
-		screen:     NewScreenStub(10, 10),
-		output:     bytes.NewBuffer(nil),
-		logs:       logs,
-		assert:     assert.New(t),
+		AppContext:   ctx,
+		ConfigReader: cfgReader,
+		Fs:           fs,
+		Module:       m,
+		screen:       NewScreenStub(10, 10),
+		output:       bytes.NewBuffer(nil),
+		logs:         logs,
+		assert:       require.New(t),
 	}
 
-	ctx.Events().Subscribe(events.HandleWithPrio(-1000000, func(e events.IEvent) events.IEvent {
+	ctx.Events().Subscribe(events.HandleWithPrio(events.AfterAllOtherChanges, func(e events.IEvent) events.IEvent {
 		switch event := e.(type) {
 		case gooster.EventOutput:
 			tester.output.Write(event.Data)
@@ -45,13 +56,12 @@ func NewModuleTester(t *testing.T, m gooster.Module) *ModuleTester {
 	return tester
 }
 
-type ModuleTester struct {
-	*gooster.AppContext
-	module gooster.Module
-	screen *screenStub
-	output *bytes.Buffer
-	logs   *bytes.Buffer
-	assert *assert.Assertions
+func (t *ModuleTester) Init() error {
+	return t.Module.Init(t.AppContext)
+}
+
+func (t *ModuleTester) AssertInited() {
+	t.assert.NoError(t.Module.Init(t.AppContext))
 }
 
 func (t *ModuleTester) SetSize(width, height int) *ModuleTester {
@@ -69,7 +79,7 @@ func (t *ModuleTester) PressKey(key tcell.Key, r ...rune) *ModuleTester {
 		r = append(r, 0)
 	}
 	event := tcell.NewEventKey(key, r[0], tcell.ModNone)
-	handle := t.module.GetInputCapture()
+	handle := t.Module.View().GetBox().GetInputCapture()
 	handle(event)
 	return t
 }
@@ -160,5 +170,5 @@ func (t *ModuleTester) View() string {
 }
 
 func (t *ModuleTester) draw() {
-	t.module.Draw(t.screen)
+	t.Module.View().Draw(t.screen)
 }
