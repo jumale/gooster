@@ -54,32 +54,3 @@ type appHandlerSetter interface {
 type boxHandlerSetter interface {
 	SetInputCapture(capture func(event *tcell.EventKey) *tcell.EventKey) *tview.Box
 }
-
-type KeyEventHandler func(event *tcell.EventKey) *tcell.EventKey
-type KeyEventHandlers map[tcell.Key]KeyEventHandler
-
-func HandleKeyEvents(target handlerGetter, handlers KeyEventHandlers) {
-	prev := target.GetInputCapture()
-	capture := func(ev *tcell.EventKey) *tcell.EventKey {
-		if prev != nil {
-			if ev = prev(ev); ev == nil {
-				return nil
-			}
-		}
-
-		if handler, ok := handlers[ev.Key()]; ok {
-			if ev = handler(ev); ev == nil {
-				return nil
-			}
-		}
-
-		return ev
-	}
-
-	switch t := target.(type) {
-	case appHandlerSetter:
-		t.SetInputCapture(capture)
-	case boxHandlerSetter:
-		t.SetInputCapture(capture)
-	}
-}

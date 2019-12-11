@@ -36,11 +36,11 @@ func newModule(fs filesys.FileSys) *Module {
 				File:     config.Color(tcell.ColorLightSteelBlue),
 			},
 			Keys: KeysConfig{
-				NewFile: config.Key(tcell.KeyF2),
-				NewDir:  config.Key(tcell.KeyF7),
-				View:    config.Key(tcell.KeyF3),
-				Delete:  config.Key(tcell.KeyF8),
-				Open:    config.Key(tcell.KeyEnter),
+				NewFile: config.NewKey(tcell.KeyF2),
+				NewDir:  config.NewKey(tcell.KeyF7),
+				View:    config.NewKey(tcell.KeyF3),
+				Delete:  config.NewKey(tcell.KeyF8),
+				Open:    config.NewKey(tcell.KeyEnter),
 			},
 		},
 	}
@@ -112,11 +112,11 @@ func (m *Module) Init(ctx gooster.Context) error {
 	}))
 
 	gooster.HandleKeyEvents(m.view, gooster.KeyEventHandlers{
-		m.cfg.Keys.NewFile.Origin(): m.handleKeyNewFile,
-		m.cfg.Keys.NewDir.Origin():  m.handleKeyNewDir,
-		m.cfg.Keys.View.Origin():    m.handleKeyViewFile,
-		m.cfg.Keys.Delete.Origin():  m.handleKeyDelete,
-		m.cfg.Keys.Open.Origin():    m.handleKeyOpen,
+		m.cfg.Keys.NewFile: m.handleKeyNewFile,
+		m.cfg.Keys.NewDir:  m.handleKeyNewDir,
+		m.cfg.Keys.View:    m.handleKeyViewFile,
+		m.cfg.Keys.Delete:  m.handleKeyDelete,
+		m.cfg.Keys.Open:    m.handleKeyOpen,
 	})
 
 	m.Events().Dispatch(EventChangeDir{Path: m.cfg.InitDir})

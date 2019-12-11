@@ -11,18 +11,18 @@ import (
 )
 
 const (
-	CompAlias        rune = 'a'
-	CompBuiltin           = 'b'
-	CompCmd               = 'c'
-	CompDir               = 'd'
-	CompExportedVars      = 'e'
-	CompFileAndDir        = 'f'
-	//CompGroups             = 'g'
-	//CompJobs               = 'j'
-	//CompReservedWords      = 'k'
-	//CompServices           = 's'
-	//CompUsers              = 'u'
-	//CompShellVars          = 'v'
+	CompGenFlagAlias        rune = 'a'
+	CompGenFlagBuiltin           = 'b'
+	CompGenFlagCmd               = 'c'
+	CompGenFlagDir               = 'd'
+	CompGenFlagExportedVars      = 'e'
+	CompGenFlagFileAndDir        = 'f'
+	//CompGenFlagGroups            = 'g'
+	//CompGenFlagJobs              = 'j'
+	//CompGenFlagReservedWords     = 'k'
+	//CompGenFlagServices          = 's'
+	//CompGenFlagUsers             = 'u'
+	//CompGenFlagShellVars         = 'v'
 )
 
 type BashCompleterConfig struct {
@@ -44,7 +44,7 @@ func NewBashCompleter(cfg BashCompleterConfig) *BashCompleter {
 	return &BashCompleter{cfg: cfg}
 }
 
-func (b *BashCompleter) Get(cmd Definition) (Completions, error) {
+func (b *BashCompleter) Get(cmd Definition) (Completion, error) {
 	if len(cmd.Args) == 0 {
 		return b.completeCommand(cmd.Command)
 	} else {
@@ -52,33 +52,37 @@ func (b *BashCompleter) Get(cmd Definition) (Completions, error) {
 	}
 }
 
-func (b *BashCompleter) completeCommand(cmd string) (Completions, error) {
-	return b.compgen(cmd, CompAlias, CompBuiltin, CompCmd)
+func (b *BashCompleter) completeCommand(cmd string) (Completion, error) {
+	vals, err := b.compgen(cmd, CompGenFlagAlias, CompGenFlagBuiltin, CompGenFlagCmd)
+	return Completion{CompleteCommand, vals}, err
 }
 
-func (b *BashCompleter) completeArg(cmd string, args []string) (Completions, error) {
+func (b *BashCompleter) completeArg(cmd string, args []string) (Completion, error) {
 	var arg string
 	arg, _ = shiftArg(args)
 
 	if strings.HasPrefix(arg, "$") {
-		return b.compgen(arg, CompExportedVars)
+		vals, err := b.compgen(arg, CompGenFlagExportedVars)
+		return Completion{CompleteVar, vals}, err
 	} else {
 		completer := b.findCustomCompletion(cmd)
 		if completer != "" {
 			result, err := b.getOutputLines(fmt.Sprintf(`%s "%s"`, completer, arg))
-			return b.cleanUp(result), err
+			return Completion{CompleteCustom, b.cleanUp(result)}, err
 		}
 	}
 
 	switch cmd {
 	case "cd":
-		return b.compgen(arg, CompDir)
+		vals, err := b.compgen(arg, CompGenFlagDir)
+		return Completion{CompleteDir, vals}, err
 	default:
-		return b.compgen(arg, CompFileAndDir)
+		vals, err := b.compgen(arg, CompGenFlagFileAndDir)
+		return Completion{CompleteFile, vals}, err
 	}
 }
 
-func (b *BashCompleter) compgen(arg string, flags ...rune) (Completions, error) {
+func (b *BashCompleter) compgen(arg string, flags ...rune) ([]string, error) {
 	generate := fmt.Sprintf(`%s -%s "%s"`, b.cfg.CompgenBin, string(flags), arg)
 	result, err := b.getOutputLines(generate)
 	return b.cleanUp(result), err

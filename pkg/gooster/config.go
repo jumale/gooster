@@ -30,7 +30,7 @@ var defaultConfig = AppConfig{
 		Rows: []int{1, -1, 1, 5},
 	},
 	Keys: KeysConfig{
-		Exit: config.Key(tcell.KeyF12),
+		Exit: config.NewKey(tcell.KeyF12),
 	},
 	Dialog: dialog.Config{
 		Colors: dialog.ColorsConfig{

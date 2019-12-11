@@ -75,6 +75,7 @@ func (m *Module) handleEventSendUserInput(event EventSendUserInput) {
 }
 
 func (m *Module) handleEventInterruptCommand() {
+	m.clearPrompt()
 	if m.cmd == nil {
 		return
 	}

@@ -42,7 +42,7 @@ func (ext *BashCompletion) Init(_ gooster.Module, ctx gooster.Context) error {
 		switch event := e.(type) {
 		case gooster.EventSetCompletion:
 			// skip if command already has completions defined by someone else
-			if len(event.Completion) > 0 {
+			if len(event.Completion.Values) > 0 {
 				return e
 			}
 

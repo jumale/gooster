@@ -16,7 +16,7 @@ type App struct {
 	root      *tview.Application
 	pages     *tview.Pages
 	modules   []moduleDefinition
-	focusMap  map[tcell.Key]tview.Primitive
+	focusMap  map[config.Key]tview.Primitive
 	lastFocus tview.Primitive
 }
 
@@ -57,7 +57,7 @@ func NewApp(cfgSource io.Reader, defaultCfgSource io.Reader) (*App, error) {
 		cfg:        appCfg,
 		root:       root,
 		pages:      pages,
-		focusMap:   make(map[tcell.Key]tview.Primitive),
+		focusMap:   make(map[config.Key]tview.Primitive),
 	}
 
 	ctx.log.Info("App is initialized")
@@ -111,9 +111,9 @@ func (app *App) Run() {
 
 	// init key handlers
 	HandleKeyEvents(app.root, app.withFocusKeys(KeyEventHandlers{
-		tcell.KeyCtrlC:             app.handleKeyCtrlC,
-		tcell.KeyEscape:            app.handleKeyEscape,
-		app.cfg.Keys.Exit.Origin(): app.handleKeyExit,
+		config.NewKey(tcell.KeyCtrlC):  app.handleKeyCtrlC,
+		config.NewKey(tcell.KeyEscape): app.handleKeyEscape,
+		app.cfg.Keys.Exit:              app.handleKeyExit,
 	}))
 
 	app.root.SetRoot(app.pages, true)
@@ -137,8 +137,8 @@ func (app *App) createMainGrid() tview.Primitive {
 			panic(err)
 		}
 
-		focusKey := cfg.FocusKey.Origin()
-		if focusKey != 0 {
+		focusKey := cfg.FocusKey
+		if !focusKey.Empty() {
 			app.focusMap[focusKey] = mod.View()
 		}
 
@@ -186,8 +186,8 @@ func (app *App) initModule(mod Module, extensions ...Extension) (Module, *Module
 		}
 	}
 
-	if modCfg.FocusKey != 0 {
-		app.focusMap[modCfg.FocusKey.Origin()] = mod.View()
+	if !modCfg.FocusKey.Empty() {
+		app.focusMap[modCfg.FocusKey] = mod.View()
 	}
 
 	app.Log().InfoF("Initialized module [lightgreen]'%T'[-] with config [lightblue]%+v[-]", mod, modCfg)

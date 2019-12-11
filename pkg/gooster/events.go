@@ -2,7 +2,9 @@ package gooster
 
 import (
 	"fmt"
+	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/command"
+	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/rivo/tview"
 )
@@ -42,7 +44,7 @@ func (e EventOutput) NeedsDraw() bool {
 type EventSetCompletion struct {
 	Input      string
 	Commands   []command.Definition
-	Completion []string
+	Completion command.Completion
 }
 
 type EventOpenDialog struct {
@@ -67,4 +69,44 @@ type EventShowTab struct {
 
 type EventRemoveTab struct {
 	TabId string
+}
+
+// ------------------------------------------------------------ //
+
+type KeyEventHandler func(event *tcell.EventKey) *tcell.EventKey
+type KeyEventHandlers map[config.Key]KeyEventHandler
+
+func HandleKeyEvents(target handlerGetter, handlers KeyEventHandlers) {
+	keyMap := make(map[[3]int16]KeyEventHandler)
+	for k, handler := range handlers {
+		keyMap[keyDef(k.Type, k.Rune, k.Mod)] = handler
+	}
+
+	prev := target.GetInputCapture()
+	capture := func(ev *tcell.EventKey) *tcell.EventKey {
+		if prev != nil {
+			if ev = prev(ev); ev == nil {
+				return nil
+			}
+		}
+
+		if handler, ok := keyMap[keyDef(ev.Key(), ev.Rune(), ev.Modifiers())]; ok {
+			if ev = handler(ev); ev == nil {
+				return nil
+			}
+		}
+
+		return ev
+	}
+
+	switch t := target.(type) {
+	case appHandlerSetter:
+		t.SetInputCapture(capture)
+	case boxHandlerSetter:
+		t.SetInputCapture(capture)
+	}
+}
+
+func keyDef(key tcell.Key, char rune, mod tcell.ModMask) [3]int16 {
+	return [3]int16{int16(key), int16(char), int16(mod)}
 }

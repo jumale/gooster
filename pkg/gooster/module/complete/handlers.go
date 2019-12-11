@@ -13,7 +13,7 @@ func (m *Module) handleSetCompletion(event gooster.EventSetCompletion) {
 	m.current = event
 	m.view.Clear()
 
-	list := event.Completion
+	list := event.Completion.Values
 	_, _, width, _ := m.view.GetRect()
 	cols := numColsForList(list, width)
 	if cols == 0 {
@@ -29,7 +29,7 @@ func (m *Module) handleSetCompletion(event gooster.EventSetCompletion) {
 		m.view.SetCell(row, col, tview.NewTableCell(list[i]))
 	}
 
-	if len(event.Completion) > 1 {
+	if len(event.Completion.Values) > 1 {
 		m.Events().Dispatch(gooster.EventSetFocus{Target: m.view})
 	}
 }
@@ -53,7 +53,7 @@ func (m *Module) handleSelectItem(event *tcell.EventKey) *tcell.EventKey {
 	selected := m.view.GetCell(m.view.GetSelection()).Text
 	m.view.Clear()
 	m.Events().Dispatch(prompt.EventSetPrompt{
-		Input: command.ApplyCompletion(m.current.Input, selected+" "),
+		Input: command.ApplyCompletion(m.current.Input, selected, m.current.Completion.Type),
 		Focus: true,
 	})
 	return event

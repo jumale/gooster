@@ -35,8 +35,8 @@ func NewModule() *Module {
 			Bg: config.Color(tcell.NewHexColor(0x333333)),
 		},
 		Keys: KeysConfig{
-			NextItem: config.Key(tcell.KeyTab),
-			Select:   config.Key(tcell.KeyEnter),
+			NextItem: config.NewKey(tcell.KeyTab),
+			Select:   config.NewKey(tcell.KeyEnter),
 		},
 	}}
 }
@@ -69,8 +69,8 @@ func (m *Module) Init(ctx gooster.Context) (err error) {
 	}))
 
 	gooster.HandleKeyEvents(m.view, gooster.KeyEventHandlers{
-		m.cfg.Keys.NextItem.Origin(): m.handleNextItem,
-		m.cfg.Keys.Select.Origin():   m.handleSelectItem,
+		m.cfg.Keys.NextItem: m.handleNextItem,
+		m.cfg.Keys.Select:   m.handleSelectItem,
 	})
 
 	return nil

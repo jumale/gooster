@@ -17,7 +17,7 @@ func TestExtension(t *testing.T) {
 
 		ext.AssertFinalEvent(gooster.EventSetCompletion{
 			Commands:   commands,
-			Completion: []string{"complete"},
+			Completion: command.Completion{Values: []string{"complete"}},
 		})
 	})
 
@@ -27,7 +27,7 @@ func TestExtension(t *testing.T) {
 
 		originalEvent := gooster.EventSetCompletion{
 			Commands:   []command.Definition{{Command: "comple"}},
-			Completion: []string{"bar", "baz"},
+			Completion: command.Completion{Values: []string{"bar", "baz"}},
 		}
 
 		ext.SendEvent(originalEvent)
@@ -46,7 +46,7 @@ func TestExtension(t *testing.T) {
 
 		ext.AssertFinalEvent(gooster.EventSetCompletion{
 			Commands:   commands,
-			Completion: []string{"complete"},
+			Completion: command.Completion{Values: []string{"complete"}},
 		})
 	})
 }

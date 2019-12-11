@@ -34,8 +34,8 @@ func NewModule() *Module {
 			Command: config.Color(tcell.ColorLightSkyBlue),
 		},
 		Keys: KeysConfig{
-			HistoryNext: config.Key(tcell.KeyDown),
-			HistoryPrev: config.Key(tcell.KeyUp),
+			HistoryNext: config.NewKey(tcell.KeyDown),
+			HistoryPrev: config.NewKey(tcell.KeyUp),
 		},
 	}}
 }
@@ -86,8 +86,8 @@ func (m *Module) Init(ctx gooster.Context) (err error) {
 		case gooster.EventInterrupt:
 			m.handleEventInterruptCommand()
 		case gooster.EventSetCompletion:
-			if len(event.Completion) == 1 {
-				m.view.SetText(command.ApplyCompletion(m.view.GetText(), event.Completion[0]+" "))
+			if event.Completion.HasSingle() {
+				m.view.SetText(command.ApplyCompletion(m.view.GetText(), event.Completion.Values[0], event.Completion.Type))
 				return events.StopPropagation
 			}
 		}
@@ -95,8 +95,8 @@ func (m *Module) Init(ctx gooster.Context) (err error) {
 	}))
 
 	gooster.HandleKeyEvents(m.view, gooster.KeyEventHandlers{
-		m.cfg.Keys.HistoryPrev.Origin(): m.handleKeyHistoryPrev,
-		m.cfg.Keys.HistoryNext.Origin(): m.handleKeyHistoryNext,
+		m.cfg.Keys.HistoryPrev: m.handleKeyHistoryPrev,
+		m.cfg.Keys.HistoryNext: m.handleKeyHistoryNext,
 	})
 
 	m.view.SetDoneFunc(m.submit)
