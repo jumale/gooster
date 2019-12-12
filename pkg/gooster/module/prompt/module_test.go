@@ -93,8 +93,8 @@ func TestModule(t *testing.T) {
 		FieldWidth:  10,
 		HistoryFile: "/history",
 		Keys: KeysConfig{
-			HistoryPrev: config.Key(tcell.KeyUp),
-			HistoryNext: config.Key(tcell.KeyDown),
+			HistoryPrev: config.NewKey(tcell.KeyUp),
+			HistoryNext: config.NewKey(tcell.KeyDown),
 		},
 	}
 
@@ -108,16 +108,16 @@ func TestModule(t *testing.T) {
 		module.SendEvent(EventSetPrompt{Input: "init"})
 		module.AssertView(withLabel("init"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryPrev.Origin())
+		module.PressKey(cfgWithHistory.Keys.HistoryPrev.Type)
 		module.AssertView(withLabel("baz"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryPrev.Origin())
+		module.PressKey(cfgWithHistory.Keys.HistoryPrev.Type)
 		module.AssertView(withLabel("bar"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryNext.Origin())
+		module.PressKey(cfgWithHistory.Keys.HistoryNext.Type)
 		module.AssertView(withLabel("baz"))
 
-		module.PressKey(cfgWithHistory.Keys.HistoryNext.Origin())
+		module.PressKey(cfgWithHistory.Keys.HistoryNext.Type)
 		module.AssertView(withLabel("init"))
 	})
 

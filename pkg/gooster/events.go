@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell"
 	"github.com/jumale/gooster/pkg/command"
+	"github.com/jumale/gooster/pkg/completion"
 	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/dialog"
 	"github.com/rivo/tview"
@@ -44,7 +45,7 @@ func (e EventOutput) NeedsDraw() bool {
 type EventSetCompletion struct {
 	Input      string
 	Commands   []command.Definition
-	Completion command.Completion
+	Completion completion.Completion
 }
 
 type EventOpenDialog struct {

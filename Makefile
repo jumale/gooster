@@ -8,9 +8,8 @@ profile:
 	bash ./.scripts/profile.sh
 
 test:
-	go fmt ./pkg/...
-	go test -bench=. ./pkg/...
-
+	@go fmt ./pkg/... || echo FAILED
+	@go test -bench=. ./pkg/... || echo FAILED
 
 debug:
 	dlv debug --headless --listen=:2345 --api-version=2 --accept-multiclient cmd/app/main.go

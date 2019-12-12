@@ -2,6 +2,7 @@ package ext
 
 import (
 	"github.com/jumale/gooster/pkg/command"
+	"github.com/jumale/gooster/pkg/completion"
 	"github.com/jumale/gooster/pkg/gooster"
 	tools "github.com/jumale/gooster/pkg/gooster/test_tools"
 	"testing"
@@ -17,7 +18,7 @@ func TestExtension(t *testing.T) {
 
 		ext.AssertFinalEvent(gooster.EventSetCompletion{
 			Commands:   commands,
-			Completion: command.Completion{Values: []string{"complete"}},
+			Completion: completion.Completion{Suggested: []string{"complete"}},
 		})
 	})
 
@@ -27,7 +28,7 @@ func TestExtension(t *testing.T) {
 
 		originalEvent := gooster.EventSetCompletion{
 			Commands:   []command.Definition{{Command: "comple"}},
-			Completion: command.Completion{Values: []string{"bar", "baz"}},
+			Completion: completion.Completion{Suggested: []string{"bar", "baz"}},
 		}
 
 		ext.SendEvent(originalEvent)
@@ -46,7 +47,7 @@ func TestExtension(t *testing.T) {
 
 		ext.AssertFinalEvent(gooster.EventSetCompletion{
 			Commands:   commands,
-			Completion: command.Completion{Values: []string{"complete"}},
+			Completion: completion.Completion{Suggested: []string{"complete"}},
 		})
 	})
 }

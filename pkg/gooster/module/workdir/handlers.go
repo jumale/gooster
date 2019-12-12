@@ -151,7 +151,7 @@ func (m *Module) handleKeyOpen(event *tcell.EventKey) *tcell.EventKey {
 	return event
 }
 
-// formatPath repalces home dir with ~
+// formatPath replaces home dir with ~
 // and cuts final result to the specified limit
 func (m *Module) formatPath(path string, limit int) string {
 	ud, _ := m.fs.UserHomeDir()

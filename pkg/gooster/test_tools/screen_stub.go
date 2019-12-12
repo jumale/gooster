@@ -100,7 +100,7 @@ func (scr *screenStub) SetCell(x int, y int, style tcell.Style, ch ...rune) {
 	}
 }
 
-func (scr *screenStub) SetContent(x int, y int, mainc rune, _ []rune, style tcell.Style) {
+func (scr *screenStub) SetContent(x int, y int, mainC rune, _ []rune, style tcell.Style) {
 	if y >= len(scr.cells) || x >= len(scr.cells[y]) {
 		return
 	}
@@ -108,10 +108,10 @@ func (scr *screenStub) SetContent(x int, y int, mainc rune, _ []rune, style tcel
 	if style == tcell.StyleDefault {
 		style = scr.style
 	}
-	scr.cells[y][x] = cell{r: mainc, s: style}
+	scr.cells[y][x] = cell{r: mainC, s: style}
 }
 
-func (scr *screenStub) GetContent(x, y int) (mainc rune, combc []rune, style tcell.Style, width int) {
+func (scr *screenStub) GetContent(x, y int) (mainC rune, combC []rune, style tcell.Style, width int) {
 	if y < len(scr.cells) && x < len(scr.cells[y]) {
 		c := scr.cells[y][x]
 		return c.r, nil, c.s, 1

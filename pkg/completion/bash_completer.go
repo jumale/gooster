@@ -1,8 +1,9 @@
-package command
+package completion
 
 import (
 	"bytes"
 	"fmt"
+	"github.com/jumale/gooster/pkg/command"
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
@@ -44,7 +45,7 @@ func NewBashCompleter(cfg BashCompleterConfig) *BashCompleter {
 	return &BashCompleter{cfg: cfg}
 }
 
-func (b *BashCompleter) Get(cmd Definition) (Completion, error) {
+func (b *BashCompleter) Get(cmd command.Definition) (Completion, error) {
 	if len(cmd.Args) == 0 {
 		return b.completeCommand(cmd.Command)
 	} else {
@@ -54,7 +55,7 @@ func (b *BashCompleter) Get(cmd Definition) (Completion, error) {
 
 func (b *BashCompleter) completeCommand(cmd string) (Completion, error) {
 	vals, err := b.compgen(cmd, CompGenFlagAlias, CompGenFlagBuiltin, CompGenFlagCmd)
-	return Completion{CompleteCommand, vals}, err
+	return Completion{TypeCommand, vals, ""}, err
 }
 
 func (b *BashCompleter) completeArg(cmd string, args []string) (Completion, error) {
@@ -63,22 +64,22 @@ func (b *BashCompleter) completeArg(cmd string, args []string) (Completion, erro
 
 	if strings.HasPrefix(arg, "$") {
 		vals, err := b.compgen(arg, CompGenFlagExportedVars)
-		return Completion{CompleteVar, vals}, err
+		return Completion{TypeVar, vals, ""}, err
 	} else {
 		completer := b.findCustomCompletion(cmd)
 		if completer != "" {
 			result, err := b.getOutputLines(fmt.Sprintf(`%s "%s"`, completer, arg))
-			return Completion{CompleteCustom, b.cleanUp(result)}, err
+			return Completion{TypeCustom, b.cleanUp(result), ""}, err
 		}
 	}
 
 	switch cmd {
 	case "cd":
 		vals, err := b.compgen(arg, CompGenFlagDir)
-		return Completion{CompleteDir, vals}, err
+		return Completion{TypeDir, vals, ""}, err
 	default:
 		vals, err := b.compgen(arg, CompGenFlagFileAndDir)
-		return Completion{CompleteFile, vals}, err
+		return Completion{TypeFile, vals, ""}, err
 	}
 }
 

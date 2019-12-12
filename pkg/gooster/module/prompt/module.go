@@ -2,7 +2,6 @@ package prompt
 
 import (
 	"github.com/gdamore/tcell"
-	"github.com/jumale/gooster/pkg/command"
 	"github.com/jumale/gooster/pkg/config"
 	"github.com/jumale/gooster/pkg/events"
 	"github.com/jumale/gooster/pkg/gooster"
@@ -86,8 +85,8 @@ func (m *Module) Init(ctx gooster.Context) (err error) {
 		case gooster.EventInterrupt:
 			m.handleEventInterruptCommand()
 		case gooster.EventSetCompletion:
-			if event.Completion.HasSingle() {
-				m.view.SetText(command.ApplyCompletion(m.view.GetText(), event.Completion.Values[0], event.Completion.Type))
+			if event.Completion.IsUnique() {
+				m.view.SetText(event.Completion.SelectFirst().ApplyTo(m.view.GetText()))
 				return events.StopPropagation
 			}
 		}
