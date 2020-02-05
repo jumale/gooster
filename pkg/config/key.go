@@ -22,14 +22,27 @@ func NewKey(k tcell.Key) Key {
 	if name, ok := tcell.KeyNames[k]; ok {
 		if strings.HasPrefix(name, "Ctrl-") {
 			m |= tcell.ModCtrl
-			ch := strings.ReplaceAll(name, "Ctrl-", "")
-			if ch == "Space" {
-				ch = " "
-			}
-			r = []rune(ch)[0]
+			r = rune(k)
 		}
 	}
 	return Key{Type: k, Rune: r, Mod: m}
+}
+
+func (k Key) SetRune(r rune) Key {
+	k.Rune = r
+	return k
+}
+
+func (k Key) AddMod(m tcell.ModMask) Key {
+	k.Mod |= m
+	return k
+}
+
+func (k Key) RmMod(m tcell.ModMask) Key {
+	if k.Mod&m > 0 {
+		k.Mod ^= m
+	}
+	return k
 }
 
 func (k Key) String() string {

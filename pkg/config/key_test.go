@@ -19,9 +19,9 @@ func TestKey(t *testing.T) {
 		}{
 			{tcell.KeyUp, Key{tcell.KeyUp, 0, 0}},
 			{tcell.KeyF9, Key{tcell.KeyF9, 0, 0}},
-			{tcell.KeyCtrlD, Key{tcell.KeyCtrlD, 'D', tcell.ModCtrl}},
-			{tcell.KeyCtrlSpace, Key{tcell.KeyCtrlSpace, ' ', tcell.ModCtrl}},
-			{tcell.KeyCtrlBackslash, Key{tcell.KeyCtrlBackslash, '\\', tcell.ModCtrl}},
+			{tcell.KeyCtrlD, Key{tcell.KeyCtrlD, rune(tcell.KeyCtrlD), tcell.ModCtrl}},
+			{tcell.KeyCtrlSpace, Key{tcell.KeyCtrlSpace, rune(tcell.KeyCtrlSpace), tcell.ModCtrl}},
+			{tcell.KeyCtrlBackslash, Key{tcell.KeyCtrlBackslash, rune(tcell.KeyCtrlBackslash), tcell.ModCtrl}},
 		}
 
 		for _, testCase := range testCases {
@@ -44,6 +44,51 @@ func TestKey(t *testing.T) {
 		for _, testCase := range testCases {
 			assert.Equal(testCase.str, testCase.val.String())
 		}
+	})
+
+	t.Run("SetRune", func(t *testing.T) {
+		t.Run("should return a new key with set rune", func(t *testing.T) {
+			origin := Key{Type: tcell.KeyRune}
+			modified := origin.SetRune('k')
+			assert.Equal(rune(0), origin.Rune, "original key should not be modified")
+			assert.Equal('k', modified.Rune)
+		})
+	})
+
+	t.Run("AddMod", func(t *testing.T) {
+		t.Run("should return a new key with added mod mask", func(t *testing.T) {
+			origin := Key{Mod: tcell.ModAlt | tcell.ModShift}
+			modified := origin.AddMod(tcell.ModCtrl)
+
+			assert.Equal(tcell.ModAlt|tcell.ModShift, origin.Mod, "original key should not be modified")
+			assert.Equal(tcell.ModAlt|tcell.ModShift|tcell.ModCtrl, modified.Mod)
+		})
+
+		t.Run("should have no effect if mod mask is the same", func(t *testing.T) {
+			origin := Key{Mod: tcell.ModAlt}
+			modified := origin.AddMod(tcell.ModAlt)
+
+			assert.Equal(tcell.ModAlt, origin.Mod, "original key should not be modified")
+			assert.Equal(tcell.ModAlt, modified.Mod)
+		})
+	})
+
+	t.Run("RmMod", func(t *testing.T) {
+		t.Run("should return a new key with removed mod mask", func(t *testing.T) {
+			origin := Key{Mod: tcell.ModAlt | tcell.ModShift}
+			modified := origin.RmMod(tcell.ModAlt)
+
+			assert.Equal(tcell.ModAlt|tcell.ModShift, origin.Mod, "original key should not be modified")
+			assert.Equal(tcell.ModShift, modified.Mod)
+		})
+
+		t.Run("should have no effect if key does not have the mod mask", func(t *testing.T) {
+			origin := Key{Mod: tcell.ModShift}
+			modified := origin.RmMod(tcell.ModAlt)
+
+			assert.Equal(tcell.ModShift, origin.Mod, "original key should not be modified")
+			assert.Equal(tcell.ModShift, modified.Mod)
+		})
 	})
 
 	t.Run("UnmarshalJSON", func(t *testing.T) {

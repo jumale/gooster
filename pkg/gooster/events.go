@@ -109,5 +109,8 @@ func HandleKeyEvents(target handlerGetter, handlers KeyEventHandlers) {
 }
 
 func keyDef(key tcell.Key, char rune, mod tcell.ModMask) [3]int16 {
+	if key != tcell.KeyRune {
+		char = 0
+	}
 	return [3]int16{int16(key), int16(char), int16(mod)}
 }

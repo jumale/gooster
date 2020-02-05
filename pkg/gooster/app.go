@@ -101,13 +101,14 @@ func (app *App) Run() {
 		return e
 	}))
 
+	app.Events().Dispatch(EventAddTab{Id: initialTabId, View: app.createMainGrid()})
+
 	// init services and views
 	if em, ok := app.Events().(DelayedEventManager); ok {
 		if err := em.Init(); err != nil {
 			panic(errors.WithMessage(err, "init event manager"))
 		}
 	}
-	app.Events().Dispatch(EventAddTab{Id: initialTabId, View: app.createMainGrid()})
 
 	// init key handlers
 	HandleKeyEvents(app.root, app.withFocusKeys(KeyEventHandlers{
@@ -115,6 +116,13 @@ func (app *App) Run() {
 		config.NewKey(tcell.KeyEscape): app.handleKeyEscape,
 		app.cfg.Keys.Exit:              app.handleKeyExit,
 	}))
+
+	// debug keys
+	prev := app.root.GetInputCapture()
+	app.root.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		app.Log().DebugF("Key press: %s [%d, %d, %d]", event.Name(), event.Key(), event.Rune(), event.Modifiers())
+		return prev(event)
+	})
 
 	app.root.SetRoot(app.pages, true)
 
@@ -190,7 +198,7 @@ func (app *App) initModule(mod Module, extensions ...Extension) (Module, *Module
 		app.focusMap[modCfg.FocusKey] = mod.View()
 	}
 
-	app.Log().InfoF("Initialized module [lightgreen]'%T'[-] with config [lightblue]%+v[-]", mod, modCfg)
+	app.Log().InfoF("Initialized module [lightgreen]'%T'[-]", mod)
 	return mod, &modCfg, nil
 }
 

@@ -1,5 +1,7 @@
 package completion
 
+import "os"
+
 type Type uint8
 
 const (
@@ -47,22 +49,31 @@ func (e Completion) SelectFirst() Completion {
 }
 
 func (e Completion) ApplyTo(target string) string {
+	completed := e.completeTarget(target)
+	suffix := " "
+	if isDir(e.Selected) || e.Type == TypeDir {
+		suffix = "/"
+	}
+	return completed + suffix
+}
+
+func (e Completion) completeTarget(target string) string {
 	if e.Selected == "" {
 		return target
 	}
-
-	var suffix string
-	switch e.Type {
-	case TypeDir:
-		suffix = "/"
-	default:
-		suffix = " "
-	}
-
 	for i := len(target) - 1; i >= 0; i -= 1 {
 		if rune(target[i]) == space && (i-1 < 0 || rune(target[i-1]) != escape) {
-			return target[:i+1] + e.Selected + suffix
+			return target[:i+1] + e.Selected
 		}
 	}
-	return e.Selected + suffix
+	return e.Selected
+}
+
+func isDir(src string) bool {
+	info, err := os.Stat(src)
+	if err != nil {
+		return false
+	} else {
+		return info.IsDir()
+	}
 }
