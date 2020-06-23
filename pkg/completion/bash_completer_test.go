@@ -101,3 +101,17 @@ func (c completionTester) ShouldReturn(t Type, completions ...string) {
 	require.NoError(c.t, err)
 	require.Equal(c.t, Completion{Type: t, Suggested: completions}, actual)
 }
+
+func BenchmarkBashCompleter(b *testing.B) {
+	completer := NewBashCompleter(BashCompleterConfig{})
+
+	for i := 0; i < b.N; i++ {
+		_, err := completer.Get(command.Definition{
+			Command: "cd",
+			Args: []string{"./testdata/completion_context/f"},
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
+}

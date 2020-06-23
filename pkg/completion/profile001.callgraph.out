@@ -1,0 +1,2 @@
+positions: instr line
+events: alloc_space(minimum)
